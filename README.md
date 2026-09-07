@@ -4,6 +4,8 @@ A native macOS menu bar app for [claude-swap](https://github.com/realiti4/claude
 
 It owns no account-switching logic of its own. Every action shells out to the real `cswap` CLI, so the two stay in sync.
 
+<img src="Resources/screenshots/menu-bar.png" alt="CSwapBar popover showing two accounts with session/weekly usage bars, warm-up, and manage actions" width="360">
+
 ## Install
 
 ```sh
