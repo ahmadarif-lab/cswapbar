@@ -18,6 +18,14 @@ final class AppState: ObservableObject {
 
     var activeAccount: Account? { accounts.first(where: \.active) }
 
+    /// Polling starts here, at app launch, rather than from the popover's
+    /// `.task`: MenuBarExtra tears its content down when the popover closes,
+    /// which cancelled the timer and left the menu bar figures frozen until
+    /// the user opened the popover again.
+    init() {
+        startAutoRefresh()
+    }
+
     func startAutoRefresh(interval: TimeInterval = 30) {
         refreshTask?.cancel()
         refreshTask = Task { [weak self] in

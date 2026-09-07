@@ -54,10 +54,8 @@ struct PopoverView: View {
         .frame(width: Theme.panelWidth)
         .background(Theme.cardBackground)
         .background(.regularMaterial)
-        .task {
-            await state.refresh()
-            state.startAutoRefresh()
-        }
+        // Freshen on open; the periodic poll itself lives in AppState.init.
+        .task { await state.refresh() }
     }
 
     private var warmupSubtitle: String? {
