@@ -7,7 +7,7 @@ It owns no account-switching logic of its own. Every action shells out to the re
 ## Install
 
 ```sh
-brew install --cask ahmadarif-lab/tap/cswap-makeover
+brew install --cask ahmadarif-lab/tap/cswapbar
 ```
 
 Requires the `cswap` CLI itself, which is not a Homebrew package:
@@ -56,7 +56,7 @@ swift run                      # dev build (shows a temporary Dock icon)
 After rebuilding while the service is running:
 
 ```sh
-launchctl kickstart -k gui/$(id -u)/dev.ahmadarif.cswap-makeover
+launchctl kickstart -k gui/$(id -u)/dev.ahmadarif.cswapbar
 ```
 
 ## License

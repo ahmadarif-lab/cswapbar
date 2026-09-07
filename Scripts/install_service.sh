@@ -7,7 +7,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LABEL="dev.ahmadarif.cswap-makeover"
+LABEL="dev.ahmadarif.cswapbar"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 
 find_app_binary() {

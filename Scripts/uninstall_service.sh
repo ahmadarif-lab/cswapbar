@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LABEL="dev.ahmadarif.cswap-makeover"
+LABEL="dev.ahmadarif.cswapbar"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 
 if [ -f "$PLIST" ]; then
