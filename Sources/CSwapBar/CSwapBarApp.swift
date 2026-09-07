@@ -33,7 +33,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         if older {
             NSApp.terminate(nil)
+            return
         }
+        LoginItem.enableOnFirstLaunch()
     }
 }
 

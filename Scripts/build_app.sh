@@ -17,13 +17,10 @@ mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 cp "$ROOT_DIR/.build/apple/Products/Release/CSwapBar" "$CONTENTS/MacOS/CSwapBar"
 cp "$ROOT_DIR/Resources/Info.plist" "$CONTENTS/Info.plist"
 
-# Ship the service scripts inside the bundle so cask users can enable
-# start-at-login without a source checkout.
-cp "$ROOT_DIR/Scripts/install_service.sh" "$ROOT_DIR/Scripts/uninstall_service.sh" "$CONTENTS/Resources/"
 
 echo "Ad-hoc signing…"
 codesign --force --deep --sign - "$APP_DIR"
 
 echo "Built: $APP_DIR"
 echo "Run it directly with: open \"$APP_DIR\""
-echo "Install as a login item with: Scripts/install_service.sh"
+echo "It registers itself as a login item on first launch."

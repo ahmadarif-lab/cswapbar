@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PopoverView: View {
     @EnvironmentObject var state: AppState
+    @State private var startAtLogin = LoginItem.isEnabled
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -55,7 +56,11 @@ struct PopoverView: View {
         .background(Theme.cardBackground)
         .background(.regularMaterial)
         // Freshen on open; the periodic poll itself lives in AppState.init.
-        .task { await state.refresh() }
+        // Login-item status is re-read too, since System Settings can change it.
+        .task {
+            startAtLogin = LoginItem.isEnabled
+            await state.refresh()
+        }
     }
 
     private var warmupSubtitle: String? {
@@ -105,6 +110,13 @@ struct PopoverView: View {
 
     private var footer: some View {
         VStack(spacing: 0) {
+            ActionRow(
+                icon: startAtLogin ? "checkmark.square" : "square",
+                title: "Start at login"
+            ) {
+                LoginItem.setEnabled(!startAtLogin)
+                startAtLogin = LoginItem.isEnabled
+            }
             ActionRow(icon: "arrow.clockwise", title: "Refresh now") {
                 Task { await state.refresh() }
             }

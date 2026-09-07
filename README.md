@@ -16,11 +16,7 @@ Requires the `cswap` CLI itself, which is not a Homebrew package:
 uv tool install claude-swap     # or: pipx install claude-swap
 ```
 
-Start it at login:
-
-```sh
-/Applications/CSwapBar.app/Contents/Resources/install_service.sh
-```
+It starts itself at login from the first launch onwards (via `SMAppService`). Turn that off from **Start at login** in the menu, or in System Settings → General → Login Items.
 
 ## What it does
 
@@ -47,16 +43,15 @@ Every row maps to a real command:
 Requires macOS 14+ and a Swift 5.10+ toolchain.
 
 ```sh
-swift run                      # dev build (shows a temporary Dock icon)
-./Scripts/build_app.sh         # packages dist/CSwapBar.app
-./Scripts/install_service.sh   # LaunchAgent: start at login, restart on crash
-./Scripts/uninstall_service.sh
+swift run                        # dev build (shows a temporary Dock icon)
+./Scripts/build_app.sh           # packages dist/CSwapBar.app
+./Scripts/package_release.sh     # also builds the DMG and prints its sha256
 ```
 
-After rebuilding while the service is running:
+To reload a rebuilt app:
 
 ```sh
-launchctl kickstart -k gui/$(id -u)/dev.ahmadarif.cswapbar
+killall CSwapBar; open /Applications/CSwapBar.app
 ```
 
 ## License
