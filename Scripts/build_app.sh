@@ -6,15 +6,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-echo "Building release binary…"
-swift build -c release
+echo "Building universal release binary…"
+swift build -c release --arch arm64 --arch x86_64
 
 APP_DIR="$ROOT_DIR/dist/CSwapBar.app"
 CONTENTS="$APP_DIR/Contents"
 rm -rf "$APP_DIR"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 
-cp "$ROOT_DIR/.build/release/CSwapBar" "$CONTENTS/MacOS/CSwapBar"
+cp "$ROOT_DIR/.build/apple/Products/Release/CSwapBar" "$CONTENTS/MacOS/CSwapBar"
 cp "$ROOT_DIR/Resources/Info.plist" "$CONTENTS/Info.plist"
 
 # Ship the service scripts inside the bundle so cask users can enable
