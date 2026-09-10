@@ -13,10 +13,21 @@ struct UsageBarView: View {
     private var level: UsageLevel { UsageLevel(pct: window?.pct) }
 
     var body: some View {
+        // The reset info brackets the bar: countdown beside the window name,
+        // the actual reset time (local, formatted by cswap: "06:20", or
+        // "Sep 13 19:00" for 7d) right under it, opposite "% used".
         VStack(alignment: .leading, spacing: 3) {
-            Text(label)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline) {
+                Text(label)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if let countdown = window?.countdown {
+                    Text("Resets in \(countdown)")
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             ZStack(alignment: .leading) {
                 Capsule()
@@ -32,19 +43,12 @@ struct UsageBarView: View {
                     .font(.system(size: 9.5))
                     .foregroundStyle(.secondary)
                 Spacer()
-                if let countdown = window?.countdown {
-                    Text(resetLabel(countdown))
+                if let clock = window?.clock {
+                    Text(clock)
                         .font(.system(size: 9.5))
                         .foregroundStyle(.secondary)
                 }
             }
         }
-    }
-
-    /// `clock` is the reset moment in local time, already formatted by cswap
-    /// ("06:20", or "Sep 13 19:00" for the 7d window).
-    private func resetLabel(_ countdown: String) -> String {
-        guard let clock = window?.clock else { return "Resets in \(countdown)" }
-        return "Resets in \(countdown) · \(clock)"
     }
 }
