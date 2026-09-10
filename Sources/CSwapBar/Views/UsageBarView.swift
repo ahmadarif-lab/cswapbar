@@ -33,19 +33,18 @@ struct UsageBarView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 if let countdown = window?.countdown {
-                    Text("Resets in \(countdown)\(clockSuffix)")
+                    Text(resetLabel(countdown))
                         .font(.system(size: 9.5))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
     }
 
-    /// The reset moment in local time, already formatted by cswap ("06:20",
-    /// or "Sep 13 19:00" for the 7d window). A shade brighter than the
-    /// countdown so the actual time is what the eye lands on.
-    private var clockSuffix: Text {
-        guard let clock = window?.clock else { return Text(verbatim: "") }
-        return Text(verbatim: " · \(clock)").foregroundStyle(.secondary)
+    /// `clock` is the reset moment in local time, already formatted by cswap
+    /// ("06:20", or "Sep 13 19:00" for the 7d window).
+    private func resetLabel(_ countdown: String) -> String {
+        guard let clock = window?.clock else { return "Resets in \(countdown)" }
+        return "Resets in \(countdown) · \(clock)"
     }
 }
