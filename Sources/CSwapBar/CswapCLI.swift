@@ -28,7 +28,19 @@ struct ProcessResult {
     }
 }
 
-/// Shells out to the real `cswap` (and `claude`) executables. This app owns
+/// Reads a pipe to EOF on a background thread; `data` is complete once
+/// `group` has been notified.
+private final class PipeDrain: @unchecked Sendable {
+    private(set) var data = Data()
+
+    init(_ pipe: Pipe, group: DispatchGroup) {
+        DispatchQueue.global().async(group: group) {
+            self.data = pipe.fileHandleForReading.readDataToEndOfFile()
+        }
+    }
+}
+
+/// Shells out to the real `cswap` (and `claude`, and for updates `brew`) executables. This app owns
 /// no account-switching logic of its own -- every action below is a plain
 /// invocation of the original CLI commands.
 actor CswapCLI {
@@ -74,18 +86,28 @@ actor CswapCLI {
             process.standardOutput = outPipe
             process.standardError = errPipe
 
-            process.terminationHandler = { proc in
-                let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
-                let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
-                let out = String(data: outData, encoding: .utf8) ?? ""
-                let err = String(data: errData, encoding: .utf8) ?? ""
-                continuation.resume(returning: ProcessResult(exitCode: proc.terminationStatus, stdout: out, stderr: err))
-            }
+            let finished = DispatchGroup()
+            finished.enter()
+            process.terminationHandler = { _ in finished.leave() }
 
             do {
                 try process.run()
             } catch {
                 continuation.resume(throwing: error)
+                return
+            }
+
+            // Drain both pipes while the process runs. Reading them only once
+            // it exits deadlocks as soon as a command writes more than the
+            // pipe buffer holds (~64 KB) -- which `brew update` can.
+            let out = PipeDrain(outPipe, group: finished)
+            let err = PipeDrain(errPipe, group: finished)
+            finished.notify(queue: .global()) {
+                continuation.resume(returning: ProcessResult(
+                    exitCode: process.terminationStatus,
+                    stdout: String(data: out.data, encoding: .utf8) ?? "",
+                    stderr: String(data: err.data, encoding: .utf8) ?? ""
+                ))
             }
         }
     }
@@ -103,6 +125,17 @@ actor CswapCLI {
     @discardableResult
     func claude(_ args: [String]) async throws -> ProcessResult {
         try await run("claude", args)
+    }
+
+    /// Used only by the updater: the app ships as a Homebrew cask, so
+    /// updating it is a plain `brew upgrade` of that cask.
+    @discardableResult
+    func brew(_ args: [String]) async throws -> ProcessResult {
+        let result = try await run("brew", args)
+        guard result.exitCode == 0 else {
+            throw CswapError.nonZeroExit(command: "brew \(args.joined(separator: " "))", code: result.exitCode, output: result.combinedOutput)
+        }
+        return result
     }
 
     // MARK: - Data

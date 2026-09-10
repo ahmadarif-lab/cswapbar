@@ -5,11 +5,13 @@ import SwiftUI
 struct CSwapBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var state = AppState()
+    @StateObject private var updater = Updater()
 
     var body: some Scene {
         MenuBarExtra {
             PopoverView()
                 .environmentObject(state)
+                .environmentObject(updater)
         } label: {
             MenuBarLabel()
                 .environmentObject(state)

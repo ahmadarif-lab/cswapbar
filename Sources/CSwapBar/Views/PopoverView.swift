@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PopoverView: View {
     @EnvironmentObject var state: AppState
+    @EnvironmentObject var updater: Updater
     @State private var startAtLogin = LoginItem.isEnabled
 
     var body: some View {
@@ -72,11 +73,16 @@ struct PopoverView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack {
+            HStack(alignment: .firstTextBaseline) {
                 Image(systemName: "sparkles")
                     .foregroundStyle(Theme.accent)
                 Text("Claude Swap")
                     .font(.system(size: 14, weight: .bold))
+                if let version = Updater.currentVersion {
+                    Text("v\(version)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                }
                 Spacer()
                 if state.isRefreshing {
                     ProgressView().controlSize(.small)
@@ -110,6 +116,9 @@ struct PopoverView: View {
 
     private var footer: some View {
         VStack(spacing: 0) {
+            if Updater.currentVersion != nil {
+                updateRow
+            }
             ActionRow(
                 icon: startAtLogin ? "checkmark.square" : "square",
                 title: "Start at login"
@@ -125,5 +134,31 @@ struct PopoverView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    /// "Check for updates" until a newer release turns up, then the button
+    /// that installs it.
+    @ViewBuilder
+    private var updateRow: some View {
+        if let release = updater.availableUpdate {
+            ActionRow(
+                icon: "arrow.down.circle.fill",
+                title: updater.isUpdating ? "Updating to v\(release.version)…" : "Update to v\(release.version)",
+                subtitle: updater.progressText ?? updater.errorMessage ?? "You have v\(Updater.currentVersion ?? "")",
+                tint: Theme.accent,
+                disabled: updater.isUpdating
+            ) {
+                Task { await updater.update() }
+            }
+        } else {
+            ActionRow(
+                icon: "arrow.down.circle",
+                title: updater.isChecking ? "Checking for updates…" : "Check for updates",
+                subtitle: updater.errorMessage ?? (updater.lastChecked == nil ? nil : "Up to date"),
+                disabled: updater.isChecking
+            ) {
+                Task { await updater.check() }
+            }
+        }
     }
 }

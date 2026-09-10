@@ -27,6 +27,7 @@ It starts itself at login from the first launch onwards (via `SMAppService`). Tu
 - Click any account card to switch to it
 - **Warm up all accounts** — rotates through every account, sends a throwaway `claude -p` to each, then returns to the account you started on
 - Add an account from the current login or from a setup-token; pause/resume and remove accounts
+- Shows its version in the header; when a newer release is out, **Update to vX** installs it with Homebrew and relaunches
 
 Every row maps to a real command:
 
@@ -39,6 +40,8 @@ Every row maps to a real command:
 | Pause / resume | `cswap disable` / `cswap enable` |
 | Remove | `cswap remove <n>` |
 | Warm up all accounts | `cswap switch <n>` + `claude -p` per account |
+| Check for updates | GitHub's latest-release API, every 6 hours and on click |
+| Update to vX | `brew update` + `brew upgrade --cask ahmadarif-lab/tap/cswapbar`, then a relaunch |
 
 ## Build from source
 
