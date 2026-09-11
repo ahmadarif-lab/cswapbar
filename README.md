@@ -17,10 +17,6 @@
   </a>
 </p>
 
-<p align="center">
-  <img src="Resources/screenshots/menu-bar.png" alt="CSwapBar popover showing two accounts with session/weekly usage bars, warm-up, and manage actions" width="360">
-</p>
-
 ## Install
 
 > [!TIP]
@@ -67,6 +63,12 @@ xattr -dr com.apple.quarantine /Applications/CSwapBar.app
 
 Or open it once through **System Settings → Privacy & Security**, where an **Open Anyway** button
 appears after a blocked launch.
+
+## Screenshot
+
+<p align="center">
+  <img src="Resources/screenshots/menu-bar.png" alt="CSwapBar popover showing two accounts with session/weekly usage bars, warm-up, and manage actions" width="360">
+</p>
 
 ## What it does
 
