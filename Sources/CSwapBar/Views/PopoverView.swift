@@ -137,14 +137,16 @@ struct PopoverView: View {
     }
 
     /// "Check for updates" until a newer release turns up, then the button
-    /// that installs it.
+    /// that installs it. The status sits at the trailing edge.
     @ViewBuilder
     private var updateRow: some View {
         if let release = updater.availableUpdate {
             ActionRow(
                 icon: "arrow.down.circle.fill",
-                title: updater.isUpdating ? "Updating to v\(release.version)…" : "Update to v\(release.version)",
-                subtitle: updater.progressText ?? updater.errorMessage ?? "You have v\(Updater.currentVersion ?? "")",
+                title: "Install update",
+                subtitle: updater.errorMessage,
+                detail: updater.progressText ?? "v\(release.version)",
+                detailTint: updater.isUpdating ? .secondary : Theme.accent,
                 tint: Theme.accent,
                 disabled: updater.isUpdating
             ) {
@@ -153,12 +155,18 @@ struct PopoverView: View {
         } else {
             ActionRow(
                 icon: "arrow.down.circle",
-                title: updater.isChecking ? "Checking for updates…" : "Check for updates",
-                subtitle: updater.errorMessage ?? (updater.lastChecked == nil ? nil : "Up to date"),
+                title: "Check for updates",
+                detail: checkStatus,
                 disabled: updater.isChecking
             ) {
                 Task { await updater.check() }
             }
         }
+    }
+
+    private var checkStatus: String? {
+        if updater.isChecking { return "Checking…" }
+        if updater.checkFailed { return "Couldn't check" }
+        return updater.lastChecked == nil ? nil : "Up to date"
     }
 }

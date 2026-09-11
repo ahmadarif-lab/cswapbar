@@ -4,6 +4,9 @@ struct ActionRow: View {
     let icon: String
     let title: String
     var subtitle: String? = nil
+    /// Short status at the trailing edge, in line with the account rows' icons.
+    var detail: String? = nil
+    var detailTint: Color = .secondary
     var tint: Color = .primary
     var disabled: Bool = false
     let action: () -> Void
@@ -27,6 +30,12 @@ struct ActionRow: View {
                     }
                 }
                 Spacer()
+                if let detail {
+                    Text(detail)
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(detailTint)
+                        .lineLimit(1)
+                }
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 10)

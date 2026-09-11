@@ -18,8 +18,10 @@ final class Updater: ObservableObject {
     @Published private(set) var latest: Release?
     @Published private(set) var lastChecked: Date?
     @Published private(set) var isChecking = false
+    @Published private(set) var checkFailed = false
     /// Non-nil while an update runs: the step it is on.
     @Published private(set) var progressText: String?
+    /// Why the last update attempt failed.
     @Published private(set) var errorMessage: String?
 
     private static let cask = "ahmadarif-lab/tap/cswapbar"
@@ -66,10 +68,10 @@ final class Updater: ObservableObject {
                 pageURL: release.htmlURL
             )
             lastChecked = Date()
-            errorMessage = nil
+            checkFailed = false
             return true
         } catch {
-            errorMessage = "Couldn't check for updates"
+            checkFailed = true
             return false
         }
     }
