@@ -1,3 +1,4 @@
+import SwapEngine
 import SwiftUI
 
 /// Compact per-account row with disable/enable + remove actions, separate

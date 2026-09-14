@@ -1,3 +1,4 @@
+import SwapEngine
 import SwiftUI
 
 struct AccountRowView: View {

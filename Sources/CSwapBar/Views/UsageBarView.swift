@@ -1,3 +1,4 @@
+import SwapEngine
 import SwiftUI
 
 /// Thin, fixed-width capsule bar (CodexBar-style). Deliberately not a

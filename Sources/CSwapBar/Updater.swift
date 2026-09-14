@@ -27,7 +27,7 @@ final class Updater: ObservableObject {
     private static let cask = "ahmadarif-lab/tap/cswapbar"
     private static let latestReleaseAPI = URL(string: "https://api.github.com/repos/ahmadarif-lab/cswapbar/releases/latest")!
 
-    private let cli = CswapCLI.shared
+    private let shell = Shell.shared
     private var checkTask: Task<Void, Never>?
 
     var isUpdating: Bool { progressText != nil }
@@ -91,9 +91,9 @@ final class Updater: ObservableObject {
             // `brew upgrade` only refreshes the tap itself when its last
             // update is a day old, so it may not know this release yet.
             progressText = "Updating Homebrew…"
-            try await cli.brew(["update", "--quiet"])
+            try await shell.brew(["update", "--quiet"])
             progressText = "Installing v\(release.version)…"
-            try await cli.brew(["upgrade", "--cask", Self.cask])
+            try await shell.brew(["upgrade", "--cask", Self.cask])
         } catch {
             errorMessage = Self.briefMessage(for: error)
             return
@@ -157,7 +157,7 @@ final class Updater: ObservableObject {
 
     /// brew's own "Error: …" line rather than its whole transcript.
     private static func briefMessage(for error: Error) -> String {
-        if case CswapError.nonZeroExit(_, _, let output) = error {
+        if case ShellError.nonZeroExit(_, _, let output) = error {
             let lines = output.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
             if let line = lines.last(where: { $0.hasPrefix("Error:") }) ?? lines.last(where: { !$0.isEmpty }) {
                 return line

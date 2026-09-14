@@ -1,19 +1,16 @@
 import Foundation
 
-enum CswapError: LocalizedError {
+enum ShellError: LocalizedError {
     case binaryNotFound(String)
     case nonZeroExit(command: String, code: Int32, output: String)
-    case decodingFailed(Error)
 
     var errorDescription: String? {
         switch self {
         case .binaryNotFound(let name):
-            return "\(name) not found. Install with: uv tool install claude-swap"
+            return "\(name) not found"
         case .nonZeroExit(let command, let code, let output):
             let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
             return "\(command) failed (\(code))\(trimmed.isEmpty ? "" : ": \(trimmed)")"
-        case .decodingFailed(let error):
-            return "Couldn't parse cswap output: \(error.localizedDescription)"
         }
     }
 }
@@ -40,11 +37,10 @@ private final class PipeDrain: @unchecked Sendable {
     }
 }
 
-/// Shells out to the real `cswap` (and `claude`, and for updates `brew`) executables. This app owns
-/// no account-switching logic of its own -- every action below is a plain
-/// invocation of the original CLI commands.
-actor CswapCLI {
-    static let shared = CswapCLI()
+/// Runs the two external tools the app still uses: `claude` for the warm-up
+/// flow and `brew` for self-updates.
+actor Shell {
+    static let shared = Shell()
 
     static let searchPath: String = {
         let home = NSHomeDirectory()
@@ -72,7 +68,7 @@ actor CswapCLI {
 
     @discardableResult
     private func run(_ binary: String, _ args: [String]) async throws -> ProcessResult {
-        guard let path = resolve(binary) else { throw CswapError.binaryNotFound(binary) }
+        guard let path = resolve(binary) else { throw ShellError.binaryNotFound(binary) }
         return try await withCheckedThrowingContinuation { continuation in
             let process = Process()
             process.executableURL = URL(fileURLWithPath: path)
@@ -112,15 +108,6 @@ actor CswapCLI {
         }
     }
 
-    @discardableResult
-    func cswap(_ args: [String]) async throws -> ProcessResult {
-        let result = try await run("cswap", args)
-        guard result.exitCode == 0 else {
-            throw CswapError.nonZeroExit(command: "cswap \(args.joined(separator: " "))", code: result.exitCode, output: result.combinedOutput)
-        }
-        return result
-    }
-
     /// Fire-and-forget-ish `claude` invocation used only by the warm-up flow.
     @discardableResult
     func claude(_ args: [String]) async throws -> ProcessResult {
@@ -133,49 +120,8 @@ actor CswapCLI {
     func brew(_ args: [String]) async throws -> ProcessResult {
         let result = try await run("brew", args)
         guard result.exitCode == 0 else {
-            throw CswapError.nonZeroExit(command: "brew \(args.joined(separator: " "))", code: result.exitCode, output: result.combinedOutput)
+            throw ShellError.nonZeroExit(command: "brew \(args.joined(separator: " "))", code: result.exitCode, output: result.combinedOutput)
         }
         return result
-    }
-
-    // MARK: - Data
-
-    func list() async throws -> ListResponse {
-        let result = try await cswap(["list", "--json"])
-        do {
-            return try JSONDecoder().decode(ListResponse.self, from: Data(result.stdout.utf8))
-        } catch {
-            throw CswapError.decodingFailed(error)
-        }
-    }
-
-    // MARK: - Actions (all real `cswap` subcommands)
-
-    func switchTo(_ target: String) async throws {
-        try await cswap(["switch", target])
-    }
-
-    func disable(_ number: Int) async throws {
-        try await cswap(["disable", String(number)])
-    }
-
-    func enable(_ number: Int) async throws {
-        try await cswap(["enable", String(number)])
-    }
-
-    func remove(_ number: Int) async throws {
-        try await cswap(["remove", String(number)])
-    }
-
-    /// "Add current login" also doubles as "refresh credentials" when the
-    /// email already matches a managed slot -- same as the Python menu bar.
-    func addCurrentLogin() async throws {
-        try await cswap(["add"])
-    }
-
-    func addToken(_ token: String, email: String?) async throws {
-        var args = ["add-token", token]
-        if let email, !email.isEmpty { args += ["--email", email] }
-        try await cswap(args)
     }
 }

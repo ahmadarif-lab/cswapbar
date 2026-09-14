@@ -1,11 +1,11 @@
 <h1 align="center">CSwapBar</h1>
 
 <p align="center">
-  A native macOS menu bar app for <a href="https://github.com/realiti4/claude-swap">claude-swap</a> —
-  see every managed Claude Code account's 5-hour and weekly usage at a glance, and switch between
-  them with one click.<br>
-  It owns no account-switching logic of its own: every action shells out to the real <code>cswap</code>
-  CLI, so the two stay in sync.
+  A native macOS menu bar app for juggling several Claude Code accounts — see every account's 5-hour
+  and weekly usage at a glance, and switch between them with one click.<br>
+  Its account engine is a Swift port of <a href="https://github.com/realiti4/claude-swap">claude-swap</a>
+  that reads and writes the same data, so the <code>cswap</code> CLI keeps working alongside it — but
+  you don't need it installed.
 </p>
 
 <p align="center">
@@ -29,11 +29,8 @@
 > It adds the `ahmadarif-lab/tap` tap, clears the quarantine flag so the app opens straight away —
 > no Gatekeeper warning to click through — and launches it once installed.
 
-You still need the `cswap` CLI itself, which is not a Homebrew package:
-
-```sh
-uv tool install claude-swap     # or: pipx install claude-swap
-```
+Nothing else is required. Accounts you already manage with claude-swap show up on first launch:
+CSwapBar uses the same `~/.claude-swap-backup` folder and Keychain items.
 
 CSwapBar starts itself at login from the first launch onwards (via `SMAppService`). Turn that off
 from **Start at login** in the menu, or in System Settings → General → Login Items.
@@ -81,9 +78,9 @@ appears after a blocked launch.
 - Add an account from the current login or from a setup-token; pause/resume and remove accounts
 - Keeps itself up to date: checks for new releases, and a Homebrew install updates in place
 
-Every row maps to a real command:
+Each action does exactly what the matching `cswap` command does, on the same files:
 
-| UI | Command |
+| UI | Same as |
 | --- | --- |
 | Account cards, usage bars | `cswap list --json` |
 | Click a card | `cswap switch <n>` |
@@ -91,20 +88,21 @@ Every row maps to a real command:
 | Add from setup-token | `cswap add-token <token> [--email …]` |
 | Pause / resume | `cswap disable` / `cswap enable` |
 | Remove | `cswap remove <n>` |
-| Warm up all accounts | `cswap switch <n>` + `claude -p` per account |
+| Warm up all accounts | a switch + `claude -p` per account |
 | Check for updates | GitHub's latest-release API, every 6 hours and on click |
 | Install update | `brew update` + `brew upgrade --cask ahmadarif-lab/tap/cswapbar`, then a relaunch |
 
 ## Requirements
 
 - macOS 14 (Sonoma) or later
-- The `cswap` CLI (`uv tool install claude-swap` or `pipx install claude-swap`)
+- Claude Code — the `claude` CLI is only needed for **Warm up all accounts**
 - Xcode command line tools with Swift 5.10+, only if you build from source
 
 ## Build from source
 
 ```sh
 swift run                        # dev build (shows a temporary Dock icon)
+swift test                       # account engine tests
 ./Scripts/build_app.sh           # packages dist/CSwapBar.app
 ./Scripts/package_release.sh     # also builds the DMG and prints its sha256
 ```
@@ -114,6 +112,14 @@ To reload a rebuilt app:
 ```sh
 killall CSwapBar; open /Applications/CSwapBar.app
 ```
+
+## Relationship to claude-swap
+
+`Sources/SwapEngine` ports claude-swap 0.26.0's `list`, `switch`, `add`, `add-token`,
+`enable`/`disable` and `remove`, keeping its on-disk format byte for byte: `~/.claude-swap-backup`,
+the `claude-swap` Keychain service, and Claude Code's own credential and lock files. When a new
+claude-swap release changes any of those paths, port the change and bump
+`AccountEngine.upstreamVersion`.
 
 ## License
 

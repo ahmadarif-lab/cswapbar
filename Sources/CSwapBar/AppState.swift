@@ -1,5 +1,6 @@
-import Foundation
 import AppKit
+import Foundation
+import SwapEngine
 
 @MainActor
 final class AppState: ObservableObject {
@@ -13,7 +14,8 @@ final class AppState: ObservableObject {
     @Published private(set) var warmupStatusText: String?
     @Published private(set) var warmupProgress: (current: Int, total: Int)?
 
-    private let cli = CswapCLI.shared
+    private let engine = AccountEngine.shared
+    private let shell = Shell.shared
     private var refreshTask: Task<Void, Never>?
 
     var activeAccount: Account? { accounts.first(where: \.active) }
@@ -41,7 +43,7 @@ final class AppState: ObservableObject {
         isRefreshing = true
         defer { isRefreshing = false }
         do {
-            let response = try await cli.list()
+            let response = try await engine.list()
             accounts = response.accounts.sorted { $0.number < $1.number }
             lastUpdated = Date()
             errorMessage = nil
@@ -61,39 +63,39 @@ final class AppState: ObservableObject {
         }
     }
 
-    // MARK: - Actions (thin wrappers over the real `cswap` commands)
+    // MARK: - Actions
 
     func switchTo(_ account: Account) async {
         guard !account.active else { return }
-        await withBusy(account.number) { try await self.cli.switchTo(String(account.number)) }
+        await withBusy(account.number) { try await self.engine.switchTo(account.number) }
     }
 
     func toggleDisabled(_ account: Account) async {
         await withBusy(account.number) {
             if account.isDisabled {
-                try await self.cli.enable(account.number)
+                try await self.engine.enable(account.number)
             } else {
-                try await self.cli.disable(account.number)
+                try await self.engine.disable(account.number)
             }
         }
     }
 
     func remove(_ account: Account) async {
-        await withBusy(account.number) { try await self.cli.remove(account.number) }
+        await withBusy(account.number) { try await self.engine.remove(account.number) }
     }
 
     func refreshCredentials() async {
-        await withBusy(activeAccount?.number) { try await self.cli.addCurrentLogin() }
+        await withBusy(activeAccount?.number) { try await self.engine.addCurrentLogin() }
     }
 
     func addFromCurrentLogin() async {
-        await withBusy(nil) { try await self.cli.addCurrentLogin() }
+        await withBusy(nil) { try await self.engine.addCurrentLogin() }
     }
 
     func addToken(_ token: String, email: String?) async {
         let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        await withBusy(nil) { try await self.cli.addToken(trimmed, email: email) }
+        await withBusy(nil) { try await self.engine.addToken(trimmed, email: email) }
     }
 
     // MARK: - Warm-up all accounts
@@ -121,18 +123,18 @@ final class AppState: ObservableObject {
             warmupProgress = (index + 1, ordered.count)
             warmupStatusText = "Switching to \(account.displayName)…"
             do {
-                try await cli.switchTo(String(account.number))
+                try await engine.switchTo(account.number)
             } catch {
                 errorMessage = error.localizedDescription
                 continue
             }
             warmupStatusText = "Sending warm-up message to \(account.displayName)…"
-            _ = try? await cli.claude(["-p", "halo"])
+            _ = try? await shell.claude(["-p", "halo"])
         }
 
         if let originalNumber {
             warmupStatusText = "Switching back to original account…"
-            try? await cli.switchTo(String(originalNumber))
+            try? await engine.switchTo(originalNumber)
         }
 
         warmupStatusText = "Warm-up complete."

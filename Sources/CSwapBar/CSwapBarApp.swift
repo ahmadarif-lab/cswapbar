@@ -1,4 +1,5 @@
 import AppKit
+import SwapEngine
 import SwiftUI
 
 @main
