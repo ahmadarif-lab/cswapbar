@@ -39,4 +39,16 @@ extension View {
                 .fill(isHovering ? Color.primary.opacity(0.08) : Color.clear)
         )
     }
+
+    /// A right-click "Copy" item for status text that may run longer than
+    /// the popover can show -- brew's own error output, for instance.
+    func copyableOnContextMenu(_ text: String) -> some View {
+        self.contextMenu {
+            Button("Copy Error Message") {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(text, forType: .string)
+            }
+        }
+    }
 }

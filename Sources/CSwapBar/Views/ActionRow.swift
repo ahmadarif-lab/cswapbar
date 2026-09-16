@@ -27,6 +27,9 @@ struct ActionRow: View {
                         Text(subtitle)
                             .font(.system(size: 10))
                             .foregroundStyle(.tertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .help(subtitle)
+                            .copyableOnContextMenu(subtitle)
                     }
                 }
                 Spacer()

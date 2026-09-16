@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Resources/AppIcon.png" alt="CSwapBar app icon" width="128">
+</p>
+
 <h1 align="center">CSwapBar</h1>
 
 <p align="center">

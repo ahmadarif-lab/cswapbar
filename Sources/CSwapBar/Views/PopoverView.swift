@@ -99,6 +99,7 @@ struct PopoverView: View {
                         .foregroundStyle(Theme.high)
                         .lineLimit(1)
                         .help(error)
+                        .copyableOnContextMenu(error)
                 }
             }
         }
