@@ -54,6 +54,17 @@ struct AccountRowView: View {
                         UsageBarView(label: "Session (5h)", window: usage.fiveHour)
                         UsageBarView(label: "Weekly (7d)", window: usage.sevenDay)
                     }
+                } else if let usage = account.lastGoodUsage {
+                    // A failed fetch (network, backoff) still has the last
+                    // successful measurement; show it, marked stale.
+                    VStack(alignment: .leading, spacing: 7) {
+                        UsageBarView(label: "Session (5h)", window: usage.fiveHour)
+                        UsageBarView(label: "Weekly (7d)", window: usage.sevenDay)
+                        Text(staleCaption)
+                            .font(.system(size: 9.5))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .opacity(0.7)
                 } else {
                     Text(account.usageStatus ?? "no usage data")
                         .font(.system(size: 10))
@@ -89,5 +100,22 @@ struct AccountRowView: View {
                 Task { await state.remove(account) }
             }
         }
+    }
+
+    /// "Last known · 5h 2m ago (unavailable)".
+    private var staleCaption: String {
+        var text = "Last known"
+        if let age = account.lastGoodAgeSeconds {
+            let minutes = Int(age / 60)
+            let ago = minutes < 1 ? "just now"
+                : minutes < 60 ? "\(minutes)m ago"
+                : minutes % 60 == 0 ? "\(minutes / 60)h ago"
+                : "\(minutes / 60)h \(minutes % 60)m ago"
+            text += " · \(ago)"
+        }
+        if let status = account.usageStatus {
+            text += " (\(status.replacingOccurrences(of: "_", with: " ")))"
+        }
+        return text
     }
 }

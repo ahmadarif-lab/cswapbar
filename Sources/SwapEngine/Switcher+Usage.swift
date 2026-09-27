@@ -669,6 +669,14 @@ extension Switcher {
             fetchedAtText = TimeFormat.isoSecondsZ(fetchedAt)
             ageS = entry.ageS.map(Self.pyRound1)
         }
+        var lastGood: Usage?
+        var lastGoodAtText: String?
+        var lastGoodAgeS: Double?
+        if usage == nil, let value = entry.lastGood, value.objectValue != nil, let fetchedAt = entry.fetchedAt {
+            lastGood = usageToModel(value, fetchedAt: fetchedAt)
+            lastGoodAtText = TimeFormat.isoSecondsZ(fetchedAt)
+            lastGoodAgeS = entry.ageS.map(Self.pyRound1)
+        }
         return Account(
             number: info.number,
             email: info.email,
@@ -680,6 +688,9 @@ extension Switcher {
             usage: usage,
             usageFetchedAt: fetchedAtText,
             usageAgeSeconds: ageS,
+            lastGoodUsage: lastGood,
+            lastGoodFetchedAt: lastGoodAtText,
+            lastGoodAgeSeconds: lastGoodAgeS,
             disabled: disabled ? true : nil,
             alias: info.alias.isEmpty ? nil : info.alias
         )

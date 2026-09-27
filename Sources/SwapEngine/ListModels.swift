@@ -48,13 +48,20 @@ public struct Account: Codable, Equatable, Identifiable, Sendable {
     public let usage: Usage?
     public let usageFetchedAt: String?
     public let usageAgeSeconds: Double?
+    /// Display-only last successful measurement, present only when `usage`
+    /// is null (cswap's `last_good_usage_fields`).
+    public let lastGoodUsage: Usage?
+    public let lastGoodFetchedAt: String?
+    public let lastGoodAgeSeconds: Double?
     public let disabled: Bool?
     public let alias: String?
 
     public init(
         number: Int, email: String, organizationName: String?, organizationUuid: String?,
         isOrganization: Bool?, active: Bool, usageStatus: String?, usage: Usage?,
-        usageFetchedAt: String?, usageAgeSeconds: Double?, disabled: Bool?, alias: String?
+        usageFetchedAt: String?, usageAgeSeconds: Double?,
+        lastGoodUsage: Usage? = nil, lastGoodFetchedAt: String? = nil, lastGoodAgeSeconds: Double? = nil,
+        disabled: Bool?, alias: String?
     ) {
         self.number = number
         self.email = email
@@ -66,6 +73,9 @@ public struct Account: Codable, Equatable, Identifiable, Sendable {
         self.usage = usage
         self.usageFetchedAt = usageFetchedAt
         self.usageAgeSeconds = usageAgeSeconds
+        self.lastGoodUsage = lastGoodUsage
+        self.lastGoodFetchedAt = lastGoodFetchedAt
+        self.lastGoodAgeSeconds = lastGoodAgeSeconds
         self.disabled = disabled
         self.alias = alias
     }
