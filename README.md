@@ -30,13 +30,13 @@
 > brew install --cask ahmadarif-lab/tap/cswapbar
 > ```
 >
-> It adds the `ahmadarif-lab/tap` tap, clears the quarantine flag so the app opens straight away —
-> no Gatekeeper warning to click through — and launches it once installed.
+> It adds the `ahmadarif-lab/tap` tap and clears the quarantine flag, so the app opens straight
+> away — no Gatekeeper warning to click through. Then open **CSwapBar** from Applications.
 
 Nothing else is required. Accounts you already manage with claude-swap show up on first launch:
 CSwapBar uses the same `~/.claude-swap-backup` folder and Keychain items.
 
-CSwapBar starts itself at login from the first launch onwards (via `SMAppService`). Turn that off
+CSwapBar starts itself at login from that first launch onwards (via `SMAppService`). Turn that off
 from **Start at login** in the menu, or in System Settings → General → Login Items.
 
 ### Updating
