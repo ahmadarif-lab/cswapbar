@@ -70,7 +70,7 @@ appears after a blocked launch.
 ## Screenshot
 
 <p align="center">
-  <img src="Resources/screenshots/menu-bar.png" alt="CSwapBar popover showing two accounts with session/weekly usage bars, warm-up, and manage actions" width="360">
+  <img src="Resources/screenshots/hero.webp" alt="CSwapBar Settings window showing the Claude popover with multiple accounts and usage bars alongside menu bar icon toggles for Claude, Antigravity, and z.ai" width="720">
 </p>
 
 ## What it does
