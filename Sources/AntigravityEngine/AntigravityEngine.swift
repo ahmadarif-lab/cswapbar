@@ -16,10 +16,12 @@ public final class AntigravityEngine: @unchecked Sendable {
     }
 
     /// Whether a quota fetch has any hope of succeeding right now: either a
-    /// CLI session's local hub is currently running (the common, no-setup
-    /// case), or a stored OAuth credential exists as a fallback.
+    /// CLI session's local hub is running, agy CLI is installed to spawn one,
+    /// or a stored OAuth credential exists as a fallback.
     public func canFetchRightNow() -> Bool {
-        AntigravityHubLocator.findRunningHub() != nil || hasStoredCredential()
+        AntigravityHubLocator.findRunningHub() != nil ||
+        AntigravityHubProcessManager.isAgyAvailable ||
+        hasStoredCredential()
     }
 
     public func removeStoredCredential() throws {
@@ -68,17 +70,18 @@ public final class AntigravityEngine: @unchecked Sendable {
         try keychain.setPassword(trimmed)
     }
 
-    /// Tries the locally running CLI hub first -- no credential needed, and
-    /// it's what actually works for accounts without a paid GCP Gemini Code
-    /// Assist license (see `AntigravityHubLocator`). Falls back to the
-    /// stored OAuth credential's cloud path only when no hub is found (or
-    /// the hub call itself fails, e.g. a stale/rotated CSRF token).
+    /// Tries a local CLI hub first -- either an already running one (e.g. from
+    /// VS Code / active CLI session) or one auto-spawned by CSwapBar via the
+    /// installed `agy` binary. This Connect-RPC path provides live, complete
+    /// quota data with no GCP Gemini Code Assist license required.
+    /// Falls back to the stored OAuth credential's cloud path only when no hub
+    /// can be found or spawned.
     public func currentAccount() async throws -> AntigravityAccountSummary {
-        if let hub = AntigravityHubLocator.findRunningHub() {
+        if let hub = await AntigravityHubProcessManager.shared.ensureRunningHub() {
             if let json = try? await AntigravityHubClient.retrieveQuotaSummaryJSON(endpoint: hub) {
                 return AntigravityQuotaParsing.summarize(json)
             }
-            DiagnosticLog.log(logTag, "local CLI hub found but its quota call failed -- falling back to the stored OAuth credential")
+            DiagnosticLog.log(logTag, "local hub found/spawned but its quota call failed -- falling back to the stored OAuth credential")
         }
 
         guard let refreshToken = try keychain.getPassword(), !refreshToken.isEmpty else {
@@ -88,5 +91,10 @@ public final class AntigravityEngine: @unchecked Sendable {
         let project = try await AntigravityQuotaClient.loadCodeAssistProject(accessToken: accessToken)
         let json = try await AntigravityQuotaClient.retrieveQuotaSummaryJSON(accessToken: accessToken, project: project)
         return AntigravityQuotaParsing.summarize(json)
+    }
+
+    /// Stops any background hub process spawned and managed by CSwapBar.
+    public func stopManagedHub() {
+        AntigravityHubProcessManager.shared.terminate()
     }
 }

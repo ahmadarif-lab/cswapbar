@@ -1,9 +1,14 @@
+import AntigravityEngine
 import AppKit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var store: ProviderStore?
     private var statusBar: StatusBarController?
+
+    func applicationWillTerminate(_ notification: Notification) {
+        AntigravityEngine.shared.stopManagedHub()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard !anotherCopyIsRunning() else {

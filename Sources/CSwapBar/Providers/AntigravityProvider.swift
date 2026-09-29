@@ -39,6 +39,7 @@ final class AntigravityProvider: ObservableObject, Provider {
     func stopAutoRefresh() {
         refreshTask?.cancel()
         refreshTask = nil
+        engine.stopManagedHub()
     }
 
     func refresh() async {

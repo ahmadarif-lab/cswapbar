@@ -393,11 +393,11 @@ private struct AntigravitySettings: View {
                 .foregroundStyle(.secondary)
         }
         Section {
-            LabeledContent("Right now", value: provider.isConfigured ? "Quota is reachable" : "No CLI session running, no fallback connected")
+            LabeledContent("Right now", value: provider.isConfigured ? "Quota is reachable" : "No CLI or fallback connected")
         } header: {
             Text("Status")
         } footer: {
-            Text("Quota shows automatically whenever the agy CLI is running a session -- nothing to set up for that. A fallback account below fills in the gaps when no session is active.")
+            Text("Quota is fetched from an active agy CLI session, or auto-started via a local background hub if agy is installed. A fallback account can also be connected below.")
                 .foregroundStyle(.secondary)
         }
         Section("Fallback account") {
