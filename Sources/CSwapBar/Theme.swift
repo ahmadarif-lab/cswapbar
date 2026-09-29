@@ -21,11 +21,16 @@ enum Theme {
         NSColor(color(for: level))
     }
 
-    static let cardBackground = LinearGradient(
-        colors: [accent.opacity(0.16), Color.purple.opacity(0.10)],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    /// Fades a provider's own accent into a neutral dark tone, so every
+    /// provider's dropdown reads as that provider's own color rather than
+    /// all sharing Claude's.
+    static func cardBackground(for accent: Color) -> LinearGradient {
+        LinearGradient(
+            colors: [accent.opacity(0.18), Color.black.opacity(0.16)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
 
     static let panelWidth: CGFloat = 340
     /// panelWidth minus the card + row horizontal insets the usage bars sit inside.

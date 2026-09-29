@@ -5,9 +5,11 @@
 <h1 align="center">CSwapBar</h1>
 
 <p align="center">
-  A native macOS menu bar app for juggling several Claude Code accounts — see every account's 5-hour
-  and weekly usage at a glance, and switch between them with one click.<br>
-  Its account engine is a Swift port of <a href="https://github.com/realiti4/claude-swap">claude-swap</a>
+  A native macOS menu bar app that tracks quota across several AI coding tools at once — Claude Code,
+  Antigravity, and z.ai — each as its own menu bar icon you can show or hide from Settings.<br>
+  For Claude, it also juggles several accounts: see every account's 5-hour and weekly usage at a
+  glance, and switch between them with one click.<br>
+  Claude's account engine is a Swift port of <a href="https://github.com/realiti4/claude-swap">claude-swap</a>
   that reads and writes the same data, so the <code>cswap</code> CLI keeps working alongside it — but
   you don't need it installed.
 </p>
@@ -95,6 +97,18 @@ Each action does exactly what the matching `cswap` command does, on the same fil
 | Warm up all accounts | a switch + `claude -p` per account |
 | Check for updates | GitHub's latest-release API, every 6 hours and on click |
 | Install update | `brew update` + `brew upgrade --cask ahmadarif-lab/tap/cswapbar`, then a relaunch |
+
+## Providers
+
+Each provider you turn on in **Settings** gets its own menu bar icon and dropdown, showing 5-hour
+and weekly (or equivalent) usage bars. Drag to reorder them, or turn one off — at least one always
+stays on so Settings itself stays reachable.
+
+| Provider | Quota shown | Connecting |
+| --- | --- | --- |
+| **Claude Code** | 5h + weekly, per account | on by default; same accounts as above |
+| **Antigravity** | 5h + weekly, for both its Gemini pool and its Claude/GPT pool | auto-detected from the Antigravity IDE's own local login — no separate sign-in |
+| **z.ai** (GLM Coding Plan) | 5h + weekly | paste an API key from z.ai's own Settings → API keys page |
 
 ## Requirements
 

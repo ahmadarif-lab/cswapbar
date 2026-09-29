@@ -14,7 +14,7 @@ CONTENTS="$APP_DIR/Contents"
 rm -rf "$APP_DIR"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 
-cp "$ROOT_DIR/.build/apple/Products/Release/CSwapBar" "$CONTENTS/MacOS/CSwapBar"
+cp "$ROOT_DIR/.build/release/CSwapBar" "$CONTENTS/MacOS/CSwapBar"
 cp "$ROOT_DIR/Resources/Info.plist" "$CONTENTS/Info.plist"
 
 echo "Building app icon…"

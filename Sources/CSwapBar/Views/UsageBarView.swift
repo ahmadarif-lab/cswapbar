@@ -1,30 +1,28 @@
-import SwapEngine
 import SwiftUI
 
 /// Thin, fixed-width capsule bar (CodexBar-style). Deliberately not a
 /// ProgressView/GeometryReader-based bar: both render taller/thicker than
 /// intended here, and GeometryReader specifically breaks layout when this
-/// view sits inside certain MenuBarExtra(.window) container hierarchies.
+/// view sits inside certain popover/panel container hierarchies.
 struct UsageBarView: View {
-    let label: String
-    let window: UsageWindow?
+    let pool: UsagePool
 
-    private var hasData: Bool { window?.pct != nil }
-    private var pct: Double { min(max(window?.pct ?? 0, 0), 100) }
-    private var level: UsageLevel { UsageLevel(pct: window?.pct) }
+    private var hasData: Bool { pool.pctUsed != nil }
+    private var pct: Double { min(max(pool.pctUsed ?? 0, 0), 100) }
+    private var level: UsageLevel { UsageLevel(pct: pool.pctUsed) }
 
     var body: some View {
         // The reset info brackets the bar: countdown beside the window name,
-        // the actual reset time (local, formatted by cswap: "06:20", or
-        // "Sep 13 19:00" for 7d) right under it, opposite "% used".
+        // the actual reset time (local: "06:20", or "Sep 13 19:00" once it's
+        // not today) right under it, opposite "% used".
         VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline) {
-                Text(label)
+                Text(pool.label)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
-                if let countdown = window?.countdown {
-                    Text("Resets in \(countdown)")
+                if let resetsAt = pool.resetsAt {
+                    Text("Resets in \(ResetTimeFormatting.countdown(to: resetsAt))")
                         .font(.system(size: 9.5))
                         .foregroundStyle(.secondary)
                 }
@@ -44,8 +42,8 @@ struct UsageBarView: View {
                     .font(.system(size: 9.5))
                     .foregroundStyle(.secondary)
                 Spacer()
-                if let clock = window?.clock {
-                    Text(clock)
+                if let resetsAt = pool.resetsAt {
+                    Text(ResetTimeFormatting.clock(resetsAt))
                         .font(.system(size: 9.5))
                         .foregroundStyle(.secondary)
                 }

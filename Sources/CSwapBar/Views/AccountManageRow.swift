@@ -1,11 +1,12 @@
-import SwapEngine
 import SwiftUI
 
 /// Compact per-account row with disable/enable + remove actions, separate
 /// from the big switchable AccountRowView above so nothing nests buttons.
+/// Claude-only: the provider that owns this row must support account
+/// mutation.
 struct AccountManageRow: View {
-    @EnvironmentObject var state: AppState
-    let account: Account
+    @ObservedObject var provider: ClaudeProvider
+    let account: ProviderAccount
     @State private var isHovering = false
     @State private var confirmingRemove = false
 
@@ -13,11 +14,11 @@ struct AccountManageRow: View {
         HStack(spacing: 8) {
             Text(account.displayName)
                 .font(.system(size: 11.5))
-                .foregroundStyle(account.isDisabled ? .tertiary : .primary)
+                .foregroundStyle(account.claudeDetail?.isDisabled == true ? .tertiary : .primary)
                 .lineLimit(1)
             Spacer()
 
-            if state.isBusy(account) {
+            if provider.isBusy(account) {
                 ProgressView().controlSize(.small)
             } else if confirmingRemove {
                 Text("Remove?")
@@ -25,7 +26,7 @@ struct AccountManageRow: View {
                     .foregroundStyle(Theme.high)
                 Button {
                     Task {
-                        await state.remove(account)
+                        await provider.remove(account)
                         confirmingRemove = false
                     }
                 } label: {
@@ -44,12 +45,12 @@ struct AccountManageRow: View {
                 .help("Cancel")
             } else {
                 Button {
-                    Task { await state.toggleDisabled(account) }
+                    Task { await provider.toggleDisabled(account) }
                 } label: {
-                    Image(systemName: account.isDisabled ? "play.circle" : "pause.circle")
+                    Image(systemName: account.claudeDetail?.isDisabled == true ? "play.circle" : "pause.circle")
                 }
                 .buttonStyle(.plain)
-                .help(account.isDisabled ? "Enable" : "Disable")
+                .help(account.claudeDetail?.isDisabled == true ? "Enable" : "Disable")
 
                 Button {
                     confirmingRemove = true

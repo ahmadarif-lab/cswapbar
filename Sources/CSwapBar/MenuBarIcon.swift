@@ -5,15 +5,18 @@ import AppKit
 /// Rendered as an NSImage rather than SwiftUI shapes: MenuBarExtra reliably
 /// renders only Text/Image in its label -- Capsule/Canvas draw nothing there.
 enum MenuBarIcon {
-    static func make(fiveHour: Double?, sevenDay: Double?) -> NSImage {
+    /// `topPct`/`bottomPct` are usually a provider's 5-hour/weekly windows,
+    /// already condensed to one number per window (see
+    /// `[ProviderAccount].menuBarPercentages()`).
+    static func make(topPct: Double?, bottomPct: Double?) -> NSImage {
         let width: CGFloat = 22
         let barHeight: CGFloat = 3
         let gap: CGFloat = 3
         let size = NSSize(width: width, height: barHeight * 2 + gap)
 
         let image = NSImage(size: size, flipped: false) { _ in
-            draw(pct: sevenDay, y: 0, width: width, height: barHeight)
-            draw(pct: fiveHour, y: barHeight + gap, width: width, height: barHeight)
+            draw(pct: bottomPct, y: 0, width: width, height: barHeight)
+            draw(pct: topPct, y: barHeight + gap, width: width, height: barHeight)
             return true
         }
         image.isTemplate = false
