@@ -80,7 +80,7 @@ appears after a blocked launch.
 - Mini usage bars in the menu bar itself, so you don't have to open the popover
 - Click any account card to switch to it
 - **Warm up all accounts** — rotates through every account, sends a throwaway `claude -p` to each,
-  then returns to the account you started on
+  then returns to the account you started on; can also run on a schedule (see [Providers](#providers))
 - Add an account from the current login or from a setup-token; pause/resume and remove accounts
 - Keeps itself up to date: checks for new releases, and a Homebrew install updates in place
 
@@ -101,34 +101,37 @@ Each action does exactly what the matching `cswap` command does, on the same fil
 ## Providers
 
 Each provider you turn on in **Settings** gets its own menu bar icon and dropdown, showing 5-hour
-and weekly (or equivalent) usage bars. Drag to reorder them, or turn one off — at least one always
-stays on so Settings itself stays reachable.
+and weekly (or equivalent) usage bars. Drag to reorder them, or turn any of them off — with every
+provider off, a single CSwapBar icon stays in the menu bar for Settings and Quit.
+
+Every provider also has a **warm-up**: a short throwaway message that starts its 5-hour window
+counting. Run it from the dropdown, or set one or more times of day (24-hour) in that provider's
+Settings page to run it on a schedule while CSwapBar is open.
 
 | Provider | Quota shown | Connecting |
 | --- | --- | --- |
 | **Claude Code** | 5h + weekly, per account | on by default; same accounts as above |
-| **Antigravity** | 5h + weekly, for both its Gemini pool and its Claude/GPT pool | auto-detected from a local Antigravity login — see [setup](#antigravity-setup) below |
+| **Antigravity** | 5h + weekly, for both its Gemini pool and its Claude/GPT pool | needs the `agy` CLI, signed in — see [setup](#antigravity-setup) below |
 | **z.ai** (GLM Coding Plan) | 5h + weekly | paste an API key from z.ai's own Settings → API keys page |
 
 ### Antigravity setup
 
-CSwapBar has no login of its own for Antigravity — it reads quota from whichever Antigravity
-login already exists on your Mac. Pick one:
+CSwapBar has no login of its own for Antigravity — it relies on the Antigravity CLI:
 
-- **CLI (recommended):** install the [Antigravity CLI](https://antigravity.google/download#antigravity-cli),
-  run `agy`, and sign in with your Google account. CSwapBar auto-spawns `agy`'s background hub
-  and reads quota straight from it.
-- **IDE or VS Code extension:** install the [Antigravity IDE](https://antigravity.google/download)
-  or the [Antigravity extension for VS Code](https://marketplace.visualstudio.com/items?itemName=Google.google-antigravity),
-  open it, and sign in with your Google account. CSwapBar picks up that same local login.
+1. Install the [Antigravity CLI](https://antigravity.google/download#antigravity-cli) (`agy`).
+2. Run `agy` once and sign in with your Google account.
+3. Turn on the **Antigravity** icon in CSwapBar's Settings.
 
-Either way, turn on the **Antigravity** icon in CSwapBar's Settings after signing in — usage
-bars appear once a valid local login is found, no separate step inside CSwapBar itself.
+CSwapBar starts `agy`'s background hub itself and reads quota straight from it, and Antigravity's
+warm-up sends its messages through `agy -p` — so `agy` only has to be installed and signed in,
+not left running.
 
 ## Requirements
 
 - macOS 14 (Sonoma) or later
-- Claude Code — the `claude` CLI is only needed for **Warm up all accounts**
+- Claude Code — the `claude` CLI is only needed for Claude's warm-up
+- The [Antigravity CLI](https://antigravity.google/download#antigravity-cli) (`agy`), signed in —
+  only for the Antigravity provider
 - Xcode command line tools with Swift 5.10+, only if you build from source
 
 ## Build from source

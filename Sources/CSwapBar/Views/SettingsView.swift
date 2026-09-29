@@ -454,7 +454,7 @@ private struct AntigravitySettings: View {
 
     var body: some View {
         Section {
-            PageTitle(title: "Antigravity", help: "Gemini + Claude/GPT quota, auto-detected from the agy CLI's or the Antigravity IDE's own local login.")
+            PageTitle(title: "Antigravity", help: "Gemini + Claude/GPT quota, read through the agy CLI's own login -- install agy and sign in once, nothing to set up here.")
         }
         Section {
             LabeledContent("Right now", value: provider.isConfigured ? "Quota is reachable" : "No CLI or fallback connected")
@@ -475,7 +475,7 @@ private struct AntigravitySettings: View {
                     provider.removeCredential()
                 }
             } else {
-                Button(provider.isConnecting ? "Detecting…" : "Auto-detect from agy / Antigravity IDE") {
+                Button(provider.isConnecting ? "Detecting…" : "Auto-detect from agy") {
                     Task { await provider.autoDetect() }
                 }
                 .disabled(provider.isConnecting)

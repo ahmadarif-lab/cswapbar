@@ -14,7 +14,7 @@ struct AddAntigravitySheet: View {
             Text("Add Antigravity account")
                 .font(.system(size: 13, weight: .semibold))
 
-            Text("Quota already shows automatically whenever the agy CLI is running a session -- nothing to set up for that. This connects a fallback account for when no session is active, by reading the login the agy CLI or the Antigravity IDE already stored on this Mac.")
+            Text("Quota already shows automatically whenever the agy CLI is running a session -- nothing to set up for that. This connects a fallback account for when no session is active, by reading the login the agy CLI already stored on this Mac.")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
