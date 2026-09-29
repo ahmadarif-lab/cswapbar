@@ -23,9 +23,14 @@ let package = Package(
             dependencies: ["ProviderKit"],
             path: "Sources/ZAIEngine"
         ),
+        .target(
+            name: "DeepSeekEngine",
+            dependencies: ["ProviderKit"],
+            path: "Sources/DeepSeekEngine"
+        ),
         .executableTarget(
             name: "CSwapBar",
-            dependencies: ["SwapEngine", "AntigravityEngine", "ZAIEngine", "ProviderKit"],
+            dependencies: ["SwapEngine", "AntigravityEngine", "ZAIEngine", "DeepSeekEngine", "ProviderKit"],
             path: "Sources/CSwapBar"
         ),
         .testTarget(
@@ -37,6 +42,11 @@ let package = Package(
             name: "ZAIEngineTests",
             dependencies: ["ZAIEngine"],
             path: "Tests/ZAIEngineTests"
+        ),
+        .testTarget(
+            name: "DeepSeekEngineTests",
+            dependencies: ["DeepSeekEngine"],
+            path: "Tests/DeepSeekEngineTests"
         ),
         .testTarget(
             name: "AntigravityEngineTests",

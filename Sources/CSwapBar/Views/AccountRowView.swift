@@ -94,7 +94,9 @@ struct AccountRowView<P: Provider>: View {
                 }
             }
 
-            if !account.pools.isEmpty {
+            if let balance = account.balance {
+                balanceView(balance)
+            } else if !account.pools.isEmpty {
                 VStack(alignment: .leading, spacing: 7) {
                     ForEach(account.pools) { pool in
                         UsageBarView(pool: pool)
@@ -119,6 +121,31 @@ struct AccountRowView<P: Provider>: View {
         .padding(.vertical, 8)
         .padding(.horizontal, 10)
         .contentShape(Rectangle())
+    }
+
+    private func balanceView(_ balance: ProviderBalance) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Balance")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(balance.total)
+                    .font(.system(size: 15, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(balance.warning == nil ? Color.primary : Theme.high)
+            }
+            if let breakdown = balance.breakdown {
+                Text(breakdown)
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            if let warning = balance.warning {
+                Text(warning)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.high)
+            }
+        }
     }
 
     private var quotaDetails: some View {

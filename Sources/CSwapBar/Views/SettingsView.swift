@@ -5,7 +5,7 @@ import ZAIEngine
 
 enum SettingsPage: String, CaseIterable, Identifiable {
     case general
-    case claude, antigravity, zai
+    case claude, antigravity, zai, deepseek
 
     var id: String { rawValue }
     var kind: ProviderKind? {
@@ -14,6 +14,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .claude: return .claude
         case .antigravity: return .antigravity
         case .zai: return .zai
+        case .deepseek: return .deepseek
         }
     }
 
@@ -108,6 +109,7 @@ private struct SettingsOptions: View {
             case .claude: ClaudeSettings(provider: store.claude)
             case .antigravity: AntigravitySettings(provider: store.antigravity)
             case .zai: ZAISettings(provider: store.zai)
+            case .deepseek: DeepSeekSettings(provider: store.deepseek)
             }
         }
         .formStyle(.grouped)
@@ -189,6 +191,7 @@ private struct GeneralSettings: View {
     @AppStorage(ProviderKind.claude.showDefaultsKey) private var showClaude = ProviderKind.claude.defaultEnabled
     @AppStorage(ProviderKind.antigravity.showDefaultsKey) private var showAntigravity = ProviderKind.antigravity.defaultEnabled
     @AppStorage(ProviderKind.zai.showDefaultsKey) private var showZai = ProviderKind.zai.defaultEnabled
+    @AppStorage(ProviderKind.deepseek.showDefaultsKey) private var showDeepSeek = ProviderKind.deepseek.defaultEnabled
     @State private var startsAtLogin = LoginItem.isEnabled
 
     var body: some View {
@@ -241,6 +244,7 @@ private struct GeneralSettings: View {
         case .claude: return $showClaude
         case .antigravity: return $showAntigravity
         case .zai: return $showZai
+        case .deepseek: return $showDeepSeek
         }
     }
 
@@ -442,6 +446,44 @@ private struct ZAISettings: View {
             kind: .zai,
             explanation: "At each time, one short chat message is sent with the saved API key so the 5-hour window starts counting."
         )
+    }
+}
+
+// MARK: - DeepSeek
+
+private struct DeepSeekSettings: View {
+    @ObservedObject var provider: DeepSeekProvider
+    @State private var apiKey = ""
+
+    var body: some View {
+        Section {
+            PageTitle(title: "DeepSeek", help: "Remaining API credit, using an API key from platform.deepseek.com → API keys. DeepSeek is pay-as-you-go, so there are no usage windows or warm-up.")
+        }
+        Section(compact: "Account") {
+            if let error = provider.errorMessage {
+                Text(error).foregroundStyle(Theme.high)
+            }
+            if provider.isConfigured {
+                LabeledContent("Status", value: "API key configured")
+                Button("Remove account", role: .destructive) {
+                    provider.removeCredential()
+                }
+            } else {
+                // Caption + separately-styled field -- see ZAISettings for why.
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("API key").font(.system(size: 11)).foregroundStyle(.secondary)
+                    TextField("", text: $apiKey) // plain, not SecureField -- see AddZAISheet for why
+                        .textFieldStyle(.roundedBorder)
+                }
+                Button("Add account") {
+                    Task {
+                        await provider.setAPIKey(apiKey)
+                        apiKey = ""
+                    }
+                }
+                .disabled(apiKey.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
     }
 }
 

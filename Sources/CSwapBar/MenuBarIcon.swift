@@ -23,6 +23,20 @@ enum MenuBarIcon {
         return image
     }
 
+    /// A provider's logo as a template image, tinted by the menu bar itself.
+    static func glyph(_ glyph: ProviderGlyph) -> NSImage {
+        let side: CGFloat = 15
+        let image = NSImage(size: NSSize(width: side, height: side), flipped: true) { rect in
+            guard let context = NSGraphicsContext.current?.cgContext else { return false }
+            context.addPath(glyph.path(in: rect).cgPath)
+            context.setFillColor(NSColor.black.cgColor)
+            context.fillPath()
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+
     private static func draw(pct: Double?, y: CGFloat, width: CGFloat, height: CGFloat) {
         let radius = height / 2
         NSColor.secondaryLabelColor.withAlphaComponent(0.35).setFill()

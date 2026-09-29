@@ -5,6 +5,7 @@ enum ProviderKind: String, CaseIterable, Identifiable {
     case claude
     case antigravity
     case zai
+    case deepseek
 
     var id: String { rawValue }
 
@@ -13,6 +14,7 @@ enum ProviderKind: String, CaseIterable, Identifiable {
         case .claude: return "Claude"
         case .antigravity: return "Antigravity"
         case .zai: return "z.ai"
+        case .deepseek: return "DeepSeek"
         }
     }
 
@@ -22,6 +24,7 @@ enum ProviderKind: String, CaseIterable, Identifiable {
         // Real logo marks, not generic stand-ins -- see ProviderGlyph.swift.
         case .antigravity: return .glyph(.antigravity)
         case .zai: return .glyph(.zai)
+        case .deepseek: return .glyph(.deepseek)
         }
     }
 
@@ -41,6 +44,8 @@ enum ProviderKind: String, CaseIterable, Identifiable {
         // but invisible (the same reason CodexBar's own bundled SVG for
         // this icon is itself `fill="white"`, not black).
         case .zai: return Color(white: 0.82)
+        // DeepSeek's own brand blue (#4D6BFE).
+        case .deepseek: return Color(red: 0x4D / 255, green: 0x6B / 255, blue: 0xFE / 255)
         }
     }
 }

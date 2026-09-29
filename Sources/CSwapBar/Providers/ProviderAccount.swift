@@ -21,11 +21,15 @@ struct ProviderAccount: Identifiable, Equatable {
     /// breakdown and per-tool call counts) -- empty for providers that don't
     /// have anything beyond the bars themselves.
     let detailRows: [ProviderDetailRow]
+    /// Prepaid credit instead of usage windows (DeepSeek) -- shown in place
+    /// of the bars, and as text next to the menu bar icon.
+    let balance: ProviderBalance?
 
     init(
         id: String, displayName: String, subtitle: String? = nil, pools: [UsagePool] = [],
         statusText: String? = nil, isStale: Bool = false, staleAgeSeconds: Double? = nil,
-        claudeDetail: ClaudeAccountDetail? = nil, detailRows: [ProviderDetailRow] = []
+        claudeDetail: ClaudeAccountDetail? = nil, detailRows: [ProviderDetailRow] = [],
+        balance: ProviderBalance? = nil
     ) {
         self.id = id
         self.displayName = displayName
@@ -36,7 +40,18 @@ struct ProviderAccount: Identifiable, Equatable {
         self.staleAgeSeconds = staleAgeSeconds
         self.claudeDetail = claudeDetail
         self.detailRows = detailRows
+        self.balance = balance
     }
+}
+
+struct ProviderBalance: Equatable {
+    /// Already formatted with its currency, e.g. "$50.00".
+    let total: String
+    /// e.g. "Paid: $40.00 / Granted: $10.00".
+    let breakdown: String?
+    /// Set when the balance can't pay for API calls (empty, or DeepSeek
+    /// reports it unavailable) -- drawn in the warning color.
+    let warning: String?
 }
 
 struct ClaudeAccountDetail: Equatable {

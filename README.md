@@ -6,7 +6,7 @@
 
 <p align="center">
   A native macOS menu bar app that tracks quota across several AI coding tools at once — Claude Code,
-  Antigravity, and z.ai — each as its own menu bar icon you can show or hide from Settings.<br>
+  Antigravity, z.ai, and DeepSeek — each as its own menu bar icon you can show or hide from Settings.<br>
   For Claude, it also juggles several accounts: see every account's 5-hour and weekly usage at a
   glance, and switch between them with one click.<br>
   Claude's account engine is a Swift port of <a href="https://github.com/realiti4/claude-swap">claude-swap</a>
@@ -104,7 +104,7 @@ Each provider you turn on in **Settings** gets its own menu bar icon and dropdow
 and weekly (or equivalent) usage bars. Drag to reorder them, or turn any of them off — with every
 provider off, a single CSwapBar icon stays in the menu bar for Settings and Quit.
 
-Every provider also has a **warm-up**: a short throwaway message that starts its 5-hour window
+Every provider with a usage window also has a **warm-up**: a short throwaway message that starts its 5-hour window
 counting. Run it from the dropdown, or set one or more times of day (24-hour) in that provider's
 Settings page to run it on a schedule while CSwapBar is open.
 
@@ -113,6 +113,7 @@ Settings page to run it on a schedule while CSwapBar is open.
 | **Claude Code** | 5h + weekly, per account | on by default; same accounts as above |
 | **Antigravity** | 5h + weekly, for both its Gemini pool and its Claude/GPT pool | needs the `agy` CLI, signed in — see [setup](#antigravity-setup) below |
 | **z.ai** (GLM Coding Plan) | 5h + weekly | paste an API key from z.ai's own Settings → API keys page |
+| **DeepSeek** | remaining API credit (paid + granted) — pay-as-you-go, so no windows or warm-up | paste an API key from platform.deepseek.com → API keys |
 
 ### Antigravity setup
 

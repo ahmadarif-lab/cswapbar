@@ -73,9 +73,16 @@ final class StatusBarController: NSObject {
             let provider = store.provider(for: kind)
             let (top, bottom) = provider.accounts.menuBarPercentages()
             guard let button = slot.button else { continue }
-            let image = MenuBarIcon.make(topPct: top, bottomPct: bottom)
-            button.image = image
-            button.title = top.map { " \(Int($0))%" } ?? ""
+            if top == nil, bottom == nil, case .glyph(let glyph) = kind.iconSource,
+               let balance = provider.accounts.lazy.compactMap(\.balance).first {
+                // A balance-only provider has no bars to draw: its logo and
+                // remaining credit say more.
+                button.image = MenuBarIcon.glyph(glyph)
+                button.title = " \(balance.total)"
+            } else {
+                button.image = MenuBarIcon.make(topPct: top, bottomPct: bottom)
+                button.title = top.map { " \(Int($0))%" } ?? ""
+            }
             button.tag = index
             button.setAccessibilityLabel("CSwapBar \(kind.title)")
         }
@@ -204,6 +211,8 @@ final class StatusBarController: NSObject {
                 ProviderDropdownView(provider: store.antigravity) { AntigravityDropdownExtras(provider: store.antigravity) }
             case .zai:
                 ProviderDropdownView(provider: store.zai) { ZAIDropdownExtras(provider: store.zai) }
+            case .deepseek:
+                ProviderDropdownView(provider: store.deepseek) { DeepSeekDropdownExtras(provider: store.deepseek) }
             }
         }
         .environmentObject(store.updater)
