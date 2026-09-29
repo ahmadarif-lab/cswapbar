@@ -14,6 +14,7 @@ enum ProviderSettings {
             MenuBarStyle.iconKey: false,
             MenuBarStyle.barsKey: true,
             MenuBarStyle.textKey: true,
+            MenuBarStyle.balanceKey: true,
         ]
         for kind in ProviderKind.allCases {
             defaults[kind.showDefaultsKey] = kind.defaultEnabled
@@ -66,23 +67,29 @@ enum ProviderSettings {
 }
 
 /// What every provider's menu bar item shows: its logo, its usage bars,
-/// its percentage (or balance, for DeepSeek) -- any combination. The
-/// defaults (bars + percentage) are the original look.
+/// its percentage, and (for a balance-only provider like DeepSeek) its
+/// balance -- any combination. Balance is its own switch rather than riding
+/// on the percentage, so e.g. Claude can show icon + bars while DeepSeek
+/// shows icon + balance. The defaults (bars + percentage + balance) are the
+/// original look.
 struct MenuBarStyle {
     static let iconKey = "cswapbar.menubar.icon"
     static let barsKey = "cswapbar.menubar.bars"
     static let textKey = "cswapbar.menubar.text"
+    static let balanceKey = "cswapbar.menubar.balance"
 
     let showsIcon: Bool
     let showsBars: Bool
     let showsText: Bool
+    let showsBalance: Bool
 
     static var current: MenuBarStyle {
         let defaults = UserDefaults.standard
         return MenuBarStyle(
             showsIcon: defaults.bool(forKey: iconKey),
             showsBars: defaults.bool(forKey: barsKey),
-            showsText: defaults.bool(forKey: textKey)
+            showsText: defaults.bool(forKey: textKey),
+            showsBalance: defaults.bool(forKey: balanceKey)
         )
     }
 }

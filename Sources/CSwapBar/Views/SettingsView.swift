@@ -195,6 +195,7 @@ private struct GeneralSettings: View {
     @AppStorage(MenuBarStyle.iconKey) private var menuBarIcon = false
     @AppStorage(MenuBarStyle.barsKey) private var menuBarBars = true
     @AppStorage(MenuBarStyle.textKey) private var menuBarText = true
+    @AppStorage(MenuBarStyle.balanceKey) private var menuBarBalance = true
     @State private var startsAtLogin = LoginItem.isEnabled
 
     var body: some View {
@@ -218,7 +219,7 @@ private struct GeneralSettings: View {
         } header: {
             SectionTitle("Menu Bar", help: "Drag ≡ to change the order. A provider switched off here is off entirely -- no polling, no scheduled warm-up. With every provider off, a single CSwapBar icon stays in the menu bar for Settings and Quit; opening CSwapBar again also shows Settings.")
         }
-        Section(compact: "Menu Bar Shows", help: "Applies to every provider's menu bar item. DeepSeek has no usage bars and shows its balance in place of the percentage. At least one stays on.") {
+        Section(compact: "Menu Bar Shows", help: "Applies to every provider's menu bar item. Icon, bars and percentage: at least one stays on. Balance is only for DeepSeek, which has no usage bars or percentage -- so e.g. icon + bars + balance shows Claude with its bars and DeepSeek with its balance. An item with nothing else to show falls back to its icon.") {
             // The last one still on can't be switched off, so no item ends up blank.
             Toggle("Provider icon", isOn: $menuBarIcon)
                 .disabled(menuBarIcon && !menuBarBars && !menuBarText)
@@ -226,6 +227,7 @@ private struct GeneralSettings: View {
                 .disabled(menuBarBars && !menuBarIcon && !menuBarText)
             Toggle("Percentage", isOn: $menuBarText)
                 .disabled(menuBarText && !menuBarIcon && !menuBarBars)
+            Toggle("Balance (DeepSeek)", isOn: $menuBarBalance)
         }
         Section(compact: "Behaviour") {
             Toggle("Start at login", isOn: $startsAtLogin)

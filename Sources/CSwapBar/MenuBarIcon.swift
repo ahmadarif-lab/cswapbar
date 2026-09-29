@@ -1,45 +1,83 @@
 import AppKit
 
-/// Draws a provider's menu bar image: its logo, its mini usage bars (5h on
-/// top, 7d below), or both side by side -- whichever `MenuBarStyle` asks for.
+/// Draws the whole menu bar strip: one segment per shown provider, each with
+/// its logo, its mini usage bars (5h on top, 7d below) and its percentage or
+/// balance -- whichever `MenuBarStyle` asks for.
 ///
-/// Rendered as an NSImage rather than SwiftUI shapes: MenuBarExtra reliably
-/// renders only Text/Image in its label -- Capsule/Canvas draw nothing there.
-/// Not a template image, since the bars carry their own usage colors; the
-/// logo is drawn in `labelColor` instead, resolved against the menu bar's
-/// appearance at draw time just like the bars' track color.
+/// Everything, text included, goes into a single NSImage so every provider
+/// lives in one status item and macOS can't slot other apps' items between
+/// them. Not a template image, since the bars carry their own usage colors;
+/// the logo and text are drawn in `labelColor` instead, resolved against the
+/// menu bar's appearance at draw time just like the bars' track color.
 enum MenuBarIcon {
+    struct Segment {
+        var icon: ProviderIconSource?
+        /// Usually a provider's 5-hour/weekly windows, already condensed to
+        /// one number per window (see `[ProviderAccount].menuBarPercentages()`).
+        var bars: (top: Double?, bottom: Double?)?
+        var text: String?
+    }
+
     private static let iconSide: CGFloat = 15
     private static let barsWidth: CGFloat = 22
     private static let barHeight: CGFloat = 3
     private static let barGap: CGFloat = 3
     private static let spacing: CGFloat = 4
+    /// Room between two providers' segments.
+    private static let segmentGap: CGFloat = 10
+    private static let font = NSFont.menuBarFont(ofSize: 11)
 
-    /// `topPct`/`bottomPct` are usually a provider's 5-hour/weekly windows,
-    /// already condensed to one number per window (see
-    /// `[ProviderAccount].menuBarPercentages()`). Returns nil when neither
-    /// part is asked for.
-    static func make(icon: ProviderIconSource?, bars: (top: Double?, bottom: Double?)?) -> NSImage? {
-        guard icon != nil || bars != nil else { return nil }
+    /// The strip image plus each segment's horizontal extent within it
+    /// (image coordinates), so a click can be mapped back to its provider.
+    static func make(_ segments: [Segment]) -> (image: NSImage, spans: [ClosedRange<CGFloat>]) {
         let barsHeight = barHeight * 2 + barGap
-        let iconWidth = icon == nil ? 0 : iconSide
-        let width = iconWidth + (icon != nil && bars != nil ? spacing : 0) + (bars == nil ? 0 : barsWidth)
-        let height = icon == nil ? barsHeight : iconSide
+        let widths = segments.map(width(of:))
+        var spans: [ClosedRange<CGFloat>] = []
+        var x: CGFloat = 0
+        for width in widths {
+            spans.append(x...(x + width))
+            x += width + segmentGap
+        }
+        let totalWidth = max(x - segmentGap, 1)
+        let textHeight = ceil(font.ascender - font.descender)
+        let height = max(iconSide, barsHeight, textHeight)
 
-        let image = NSImage(size: NSSize(width: width, height: height), flipped: true) { _ in
-            if let icon {
-                draw(icon, in: NSRect(x: 0, y: 0, width: iconSide, height: iconSide))
-            }
-            if let bars {
-                let x = width - barsWidth
-                let top = (height - barsHeight) / 2
-                draw(pct: bars.top, x: x, y: top)
-                draw(pct: bars.bottom, x: x, y: top + barHeight + barGap)
+        let image = NSImage(size: NSSize(width: totalWidth, height: height), flipped: true) { _ in
+            for (segment, span) in zip(segments, spans) {
+                var x = span.lowerBound
+                if let icon = segment.icon {
+                    draw(icon, in: NSRect(x: x, y: (height - iconSide) / 2, width: iconSide, height: iconSide))
+                    x += iconSide + spacing
+                }
+                if let bars = segment.bars {
+                    let top = (height - barsHeight) / 2
+                    draw(pct: bars.top, x: x, y: top)
+                    draw(pct: bars.bottom, x: x, y: top + barHeight + barGap)
+                    x += barsWidth + spacing
+                }
+                if let text = segment.text {
+                    NSAttributedString(string: text, attributes: textAttributes)
+                        .draw(at: NSPoint(x: x, y: (height - textHeight) / 2))
+                }
             }
             return true
         }
         image.isTemplate = false
-        return image
+        return (image, spans)
+    }
+
+    private static var textAttributes: [NSAttributedString.Key: Any] {
+        [.font: font, .foregroundColor: NSColor.labelColor]
+    }
+
+    private static func width(of segment: Segment) -> CGFloat {
+        var parts: [CGFloat] = []
+        if segment.icon != nil { parts.append(iconSide) }
+        if segment.bars != nil { parts.append(barsWidth) }
+        if let text = segment.text {
+            parts.append(ceil(NSAttributedString(string: text, attributes: textAttributes).size().width))
+        }
+        return parts.reduce(0, +) + spacing * CGFloat(max(parts.count - 1, 0))
     }
 
     private static func draw(_ icon: ProviderIconSource, in rect: NSRect) {
