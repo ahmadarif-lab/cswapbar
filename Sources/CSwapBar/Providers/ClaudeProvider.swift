@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import ProviderKit
 import SwapEngine
 
 /// Behavior-preserving wrap of the old `AppState`: same engine calls, same
@@ -61,6 +62,7 @@ final class ClaudeProvider: ObservableObject, AccountMutating {
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
+            DiagnosticLog.log("claude", "refresh failed: \(DiagnosticLog.describe(error))")
         }
     }
 
@@ -111,7 +113,7 @@ final class ClaudeProvider: ObservableObject, AccountMutating {
         return whole.date(from: raw)
     }
 
-    private func withBusy(_ number: Int?, _ body: () async throws -> Void) async {
+    private func withBusy(_ number: Int?, label: String = #function, _ body: () async throws -> Void) async {
         if let number { busyNumbers.insert(number) }
         defer { if let number { busyNumbers.remove(number) } }
         do {
@@ -119,6 +121,7 @@ final class ClaudeProvider: ObservableObject, AccountMutating {
             await refresh()
         } catch {
             errorMessage = error.localizedDescription
+            DiagnosticLog.log("claude", "\(label) failed: \(DiagnosticLog.describe(error))")
         }
     }
 
@@ -199,6 +202,7 @@ final class ClaudeProvider: ObservableObject, AccountMutating {
                 try await engine.switchTo(account.number)
             } catch {
                 errorMessage = error.localizedDescription
+                DiagnosticLog.log("claude", "warm-up: switching to \(account.displayName) failed: \(DiagnosticLog.describe(error))")
                 continue
             }
             warmupStatusText = "Sending warm-up message to \(account.displayName)…"

@@ -1,4 +1,5 @@
 import Foundation
+import ProviderKit
 
 struct AntigravityTokenResponse: Decodable {
     let accessToken: String
@@ -41,15 +42,35 @@ enum AntigravityOAuth {
 
     static func refreshAccessToken(refreshToken: String) async throws -> (accessToken: String, expiresAt: Date) {
         var lastError: Error = AntigravityEngineError.decoding("no OAuth client configured")
-        for client in clients {
+        for (index, client) in clients.enumerated() {
             do {
-                return try await refreshAccessToken(refreshToken: refreshToken, client: client)
+                let result = try await refreshAccessToken(refreshToken: refreshToken, client: client)
+                // Only the fallback path is worth a log line -- if the
+                // first client always works, logging that every ~60s poll
+                // would just be noise.
+                if index > 0 {
+                    DiagnosticLog.log("antigravity", "OAuth refresh succeeded via fallback client \(index + 1)/\(clients.count)")
+                }
+                return result
             } catch {
+                DiagnosticLog.log("antigravity", "OAuth refresh via client \(index + 1)/\(clients.count) failed: \(DiagnosticLog.describe(error))")
                 lastError = error
             }
         }
         throw lastError
     }
+
+    /// RFC 3986 unreserved characters -- the only ones safe to leave
+    /// unescaped in an `application/x-www-form-urlencoded` value.
+    /// `.urlQueryAllowed` is NOT safe here: it leaves `+`, `&`, `=`, `#`
+    /// unescaped, and a literal `+` in a form-urlencoded body is decoded by
+    /// the receiving server as a space. A refresh token containing `+`
+    /// would silently get a character replaced with a space in transit,
+    /// producing a Google `invalid_grant` / "Bad Request" response that
+    /// looks like an expired/revoked token but is actually just a mangled
+    /// request body.
+    private static let formValueAllowedCharacters = CharacterSet(charactersIn: "-._~")
+        .union(.alphanumerics)
 
     private static func refreshAccessToken(refreshToken: String, client: OAuthClient) async throws -> (accessToken: String, expiresAt: Date) {
         var request = URLRequest(url: tokenURL)
@@ -63,7 +84,7 @@ enum AntigravityOAuth {
             "grant_type": "refresh_token",
         ]
         request.httpBody = form
-            .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")" }
+            .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: formValueAllowedCharacters) ?? "")" }
             .joined(separator: "&")
             .data(using: .utf8)
 

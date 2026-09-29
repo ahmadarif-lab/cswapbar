@@ -1,4 +1,5 @@
 import Foundation
+import ProviderKit
 import ZAIEngine
 
 @MainActor
@@ -46,6 +47,7 @@ final class ZAIProvider: ObservableObject, Provider {
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
+            DiagnosticLog.log("zai", "refresh failed: \(DiagnosticLog.describe(error))")
         }
     }
 
@@ -76,6 +78,7 @@ final class ZAIProvider: ObservableObject, Provider {
             await refresh()
         } catch {
             errorMessage = error.localizedDescription
+            DiagnosticLog.log("zai", "setting API key failed: \(DiagnosticLog.describe(error))")
         }
     }
 

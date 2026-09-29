@@ -25,7 +25,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "CSwapBar",
-            dependencies: ["SwapEngine", "AntigravityEngine", "ZAIEngine"],
+            dependencies: ["SwapEngine", "AntigravityEngine", "ZAIEngine", "ProviderKit"],
             path: "Sources/CSwapBar"
         ),
         .testTarget(

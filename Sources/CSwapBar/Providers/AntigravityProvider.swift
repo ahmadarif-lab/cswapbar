@@ -1,5 +1,6 @@
 import AntigravityEngine
 import Foundation
+import ProviderKit
 
 @MainActor
 final class AntigravityProvider: ObservableObject, Provider {
@@ -56,6 +57,7 @@ final class AntigravityProvider: ObservableObject, Provider {
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
+            DiagnosticLog.log("antigravity", "refresh failed: \(DiagnosticLog.describe(error))")
         }
     }
 
@@ -82,6 +84,7 @@ final class AntigravityProvider: ObservableObject, Provider {
             await refresh()
         } catch {
             errorMessage = error.localizedDescription
+            DiagnosticLog.log("antigravity", "auto-detect failed: \(DiagnosticLog.describe(error))")
         }
     }
 
@@ -94,6 +97,7 @@ final class AntigravityProvider: ObservableObject, Provider {
             await refresh()
         } catch {
             errorMessage = error.localizedDescription
+            DiagnosticLog.log("antigravity", "manual token connect failed: \(DiagnosticLog.describe(error))")
         }
     }
 

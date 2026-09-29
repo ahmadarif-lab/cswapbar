@@ -1,6 +1,8 @@
 import Foundation
 import ProviderKit
 
+private let logTag = "antigravity"
+
 /// Public façade for Antigravity (Gemini + Claude/GPT) quota, mirroring the
 /// shape of `SwapEngine.AccountEngine` and `ZAIEngine.ZAIEngine`: a single
 /// owned credential, refreshed on demand.
@@ -38,16 +40,20 @@ public final class AntigravityEngine: @unchecked Sendable {
 
     private func detectRefreshToken() throws -> String {
         if let token = try? JetskiStandaloneTokenReader.readRefreshToken(), !token.isEmpty {
+            DiagnosticLog.log(logTag, "auto-detect: found a refresh token via the agy CLI's local token file")
             return token
         }
         do {
-            return try VSCDBReader.readRefreshToken()
+            let token = try VSCDBReader.readRefreshToken()
+            DiagnosticLog.log(logTag, "auto-detect: found a refresh token via the Antigravity IDE's vscdb (agy CLI token file wasn't found or was empty)")
+            return token
         } catch {
             let cliReason = (try? JetskiStandaloneTokenReader.readRefreshToken()) == nil
                 ? JetskiTokenReaderError.notFound.errorDescription ?? ""
                 : ""
             let ideReason = (error as? LocalizedError)?.errorDescription ?? "\(error)"
             let combined = [cliReason, ideReason].filter { !$0.isEmpty }.joined(separator: " ")
+            DiagnosticLog.log(logTag, "auto-detect: no source found a token -- \(combined)")
             throw AntigravityEngineError.autoDetect(combined.isEmpty ? "Auto-detect failed." : combined)
         }
     }
@@ -68,8 +74,11 @@ public final class AntigravityEngine: @unchecked Sendable {
     /// stored OAuth credential's cloud path only when no hub is found (or
     /// the hub call itself fails, e.g. a stale/rotated CSRF token).
     public func currentAccount() async throws -> AntigravityAccountSummary {
-        if let hub = AntigravityHubLocator.findRunningHub(), let json = try? await AntigravityHubClient.retrieveQuotaSummaryJSON(endpoint: hub) {
-            return AntigravityQuotaParsing.summarize(json)
+        if let hub = AntigravityHubLocator.findRunningHub() {
+            if let json = try? await AntigravityHubClient.retrieveQuotaSummaryJSON(endpoint: hub) {
+                return AntigravityQuotaParsing.summarize(json)
+            }
+            DiagnosticLog.log(logTag, "local CLI hub found but its quota call failed -- falling back to the stored OAuth credential")
         }
 
         guard let refreshToken = try keychain.getPassword(), !refreshToken.isEmpty else {

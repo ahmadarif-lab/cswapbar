@@ -1,4 +1,7 @@
 import Foundation
+import ProviderKit
+
+private let logTag = "zai"
 
 public enum ZAIEngineError: LocalizedError, Equatable {
     case notConfigured
@@ -56,6 +59,15 @@ public final class ZAIEngine: @unchecked Sendable {
         guard let apiKey = try keychain.getAPIKey(), !apiKey.isEmpty else {
             throw ZAIEngineError.notConfigured
         }
+        do {
+            return try await fetchAccount(apiKey: apiKey)
+        } catch {
+            DiagnosticLog.log(logTag, "quota fetch failed: \(DiagnosticLog.describe(error))")
+            throw error
+        }
+    }
+
+    private func fetchAccount(apiKey: String) async throws -> ZAIAccountSummary {
         var request = URLRequest(url: region.baseURL.appendingPathComponent("api/monitor/usage/quota/limit"))
         request.httpMethod = "GET"
         request.timeoutInterval = 10

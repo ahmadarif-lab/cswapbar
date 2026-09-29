@@ -1,4 +1,5 @@
 import AppKit
+import ProviderKit
 import SwiftUI
 import ZAIEngine
 
@@ -151,6 +152,16 @@ private struct GeneralSettings: View {
                     LoginItem.setEnabled(enabled)
                     startsAtLogin = LoginItem.isEnabled
                 }
+        }
+        Section {
+            Button("Show Log File in Finder") {
+                NSWorkspace.shared.activateFileViewerSelecting([DiagnosticLog.fileURL])
+            }
+        } header: {
+            Text("Diagnostics")
+        } footer: {
+            Text("Records connection errors for every provider -- attach this file when reporting a problem.")
+                .foregroundStyle(.secondary)
         }
     }
 
