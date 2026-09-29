@@ -43,6 +43,10 @@ struct AddAntigravitySheet: View {
 
             DisclosureGroup("Paste a refresh token manually", isExpanded: $showManualEntry) {
                 VStack(alignment: .leading, spacing: 8) {
+                    Text("The `refresh_token` value from `~/.gemini/jetski-standalone-oauth-token`'s `token` object.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     // Plain, not SecureField -- see AddZAISheet for why.
                     TextField("Google OAuth refresh token", text: $manualToken)
                         .textFieldStyle(.roundedBorder)

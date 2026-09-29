@@ -345,7 +345,14 @@ private struct ZAISettings: View {
                     provider.removeCredential()
                 }
             } else {
-                TextField("API key", text: $apiKey) // plain, not SecureField -- see AddZAISheet for why
+                // A labeled TextField as a bare Section row can collapse its
+                // editable area to nothing in this Form -- an explicit
+                // caption + a separately-styled field is more reliable.
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("API key").font(.system(size: 11)).foregroundStyle(.secondary)
+                    TextField("", text: $apiKey) // plain, not SecureField -- see AddZAISheet for why
+                        .textFieldStyle(.roundedBorder)
+                }
                 Picker("Region", selection: $region) {
                     ForEach(ZAIRegion.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
@@ -402,7 +409,18 @@ private struct AntigravitySettings: View {
                 .disabled(provider.isConnecting)
                 Toggle("Paste a refresh token manually instead", isOn: $showManualEntry)
                 if showManualEntry {
-                    TextField("Google OAuth refresh token", text: $manualToken) // plain, not SecureField -- see AddZAISheet for why
+                    Text("The `refresh_token` value from `~/.gemini/jetski-standalone-oauth-token`'s `token` object.")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                    // A labeled TextField as a bare Section row can collapse
+                    // its editable area to nothing in this Form -- an
+                    // explicit caption + a separately-styled field is more
+                    // reliable.
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Refresh token").font(.system(size: 11)).foregroundStyle(.secondary)
+                        TextField("", text: $manualToken) // plain, not SecureField -- see AddZAISheet for why
+                            .textFieldStyle(.roundedBorder)
+                    }
                     Button("Connect") {
                         Task {
                             await provider.connectWithManualToken(manualToken)
