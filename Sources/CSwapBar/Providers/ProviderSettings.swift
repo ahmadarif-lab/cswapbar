@@ -15,6 +15,7 @@ enum ProviderSettings {
             MenuBarStyle.barsKey: true,
             MenuBarStyle.textKey: true,
             MenuBarStyle.balanceKey: true,
+            MenuBarStyle.groupedKey: true,
         ]
         for kind in ProviderKind.allCases {
             defaults[kind.showDefaultsKey] = kind.defaultEnabled
@@ -77,11 +78,15 @@ struct MenuBarStyle {
     static let barsKey = "cswapbar.menubar.bars"
     static let textKey = "cswapbar.menubar.text"
     static let balanceKey = "cswapbar.menubar.balance"
+    /// All providers in one status item, so other apps' items can't end up
+    /// between them, rather than one status item each.
+    static let groupedKey = "cswapbar.menubar.grouped"
 
     let showsIcon: Bool
     let showsBars: Bool
     let showsText: Bool
     let showsBalance: Bool
+    let groupsItems: Bool
 
     static var current: MenuBarStyle {
         let defaults = UserDefaults.standard
@@ -89,7 +94,8 @@ struct MenuBarStyle {
             showsIcon: defaults.bool(forKey: iconKey),
             showsBars: defaults.bool(forKey: barsKey),
             showsText: defaults.bool(forKey: textKey),
-            showsBalance: defaults.bool(forKey: balanceKey)
+            showsBalance: defaults.bool(forKey: balanceKey),
+            groupsItems: defaults.bool(forKey: groupedKey)
         )
     }
 }
