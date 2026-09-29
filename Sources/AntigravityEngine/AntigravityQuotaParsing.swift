@@ -37,6 +37,10 @@ enum AntigravityQuotaParsing {
 
     static func summarize(_ json: Any) -> AntigravityAccountSummary {
         var pools: [AntigravityUsagePool] = []
+        // The hub's real response lists each pool's weekly bucket before its
+        // 5h one, but the UI wants the shorter/more-urgent window on top --
+        // sort after collecting rather than relying on source order.
+        var poolOrder: [String: Int] = [:]
         for bucket in findBuckets(json) {
             let bucketID = ((bucket["bucketId"] as? String) ?? (bucket["bucket_id"] as? String) ?? "").lowercased()
             let poolName: String
@@ -47,6 +51,7 @@ enum AntigravityQuotaParsing {
             } else {
                 continue // an unrecognized pool kind -- skip rather than guess
             }
+            if poolOrder[poolName] == nil { poolOrder[poolName] = poolOrder.count }
 
             if let windowRaw = bucket["window"] as? String {
                 // Hub shape: one bucket, one window, directly.
@@ -73,7 +78,13 @@ enum AntigravityQuotaParsing {
                 ))
             }
         }
-        return AntigravityAccountSummary(pools: pools)
+        let sorted = pools.sorted { a, b in
+            let orderA = poolOrder[a.poolName] ?? 0
+            let orderB = poolOrder[b.poolName] ?? 0
+            if orderA != orderB { return orderA < orderB }
+            return windowRank(a.windowLabel) < windowRank(b.windowLabel)
+        }
+        return AntigravityAccountSummary(pools: sorted)
     }
 
     private static func windowLabel(_ raw: String) -> String {
@@ -81,6 +92,16 @@ enum AntigravityQuotaParsing {
         case "5h": return "Session (5h)"
         case "weekly": return "Weekly"
         default: return raw.capitalized
+        }
+    }
+
+    /// 5h above weekly within a pool -- the shorter, more time-pressured
+    /// window belongs on top.
+    private static func windowRank(_ label: String) -> Int {
+        switch label {
+        case "Session (5h)": return 0
+        case "Weekly": return 1
+        default: return 2
         }
     }
 

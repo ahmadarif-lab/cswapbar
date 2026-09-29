@@ -105,4 +105,37 @@ final class AntigravityQuotaParsingTests: XCTestCase {
         let thirdPartyWeekly = try XCTUnwrap(summary.pools.first { $0.poolName == "Claude/GPT" && $0.windowLabel == "Weekly" })
         XCTAssertEqual(thirdPartyWeekly.pctUsed!, 33.63673, accuracy: 0.001)
     }
+
+    /// The real hub response lists each pool's weekly bucket before its 5h
+    /// one (see the raw JSON above), but the UI shows 5h on top -- this
+    /// locks in that `summarize` reorders rather than passing source order
+    /// straight through.
+    func testFiveHourPoolIsOrderedAboveWeeklyWithinEachPoolName() throws {
+        let json = try JSONSerialization.jsonObject(with: Data("""
+        {
+          "response": {
+            "groups": [
+              {
+                "buckets": [
+                  {"bucketId": "gemini-weekly", "window": "weekly", "remainingFraction": 0.68, "resetTime": "2026-10-03T11:37:33Z"},
+                  {"bucketId": "gemini-5h", "window": "5h", "remainingFraction": 1, "resetTime": "2026-09-29T12:33:17Z"}
+                ]
+              },
+              {
+                "buckets": [
+                  {"bucketId": "3p-weekly", "window": "weekly", "remainingFraction": 0.66, "resetTime": "2026-10-03T15:14:52Z"},
+                  {"bucketId": "3p-5h", "window": "5h", "remainingFraction": 1, "resetTime": "2026-09-29T12:33:17Z"}
+                ]
+              }
+            ]
+          }
+        }
+        """.utf8))
+
+        let summary = AntigravityQuotaParsing.summarize(json)
+        XCTAssertEqual(summary.pools.map { "\($0.poolName)/\($0.windowLabel)" }, [
+            "Gemini/Session (5h)", "Gemini/Weekly",
+            "Claude/GPT/Session (5h)", "Claude/GPT/Weekly",
+        ])
+    }
 }
