@@ -107,8 +107,23 @@ stays on so Settings itself stays reachable.
 | Provider | Quota shown | Connecting |
 | --- | --- | --- |
 | **Claude Code** | 5h + weekly, per account | on by default; same accounts as above |
-| **Antigravity** | 5h + weekly, for both its Gemini pool and its Claude/GPT pool | auto-detected from the Antigravity IDE's own local login — no separate sign-in |
+| **Antigravity** | 5h + weekly, for both its Gemini pool and its Claude/GPT pool | auto-detected from a local Antigravity login — see [setup](#antigravity-setup) below |
 | **z.ai** (GLM Coding Plan) | 5h + weekly | paste an API key from z.ai's own Settings → API keys page |
+
+### Antigravity setup
+
+CSwapBar has no login of its own for Antigravity — it reads quota from whichever Antigravity
+login already exists on your Mac. Pick one:
+
+- **CLI (recommended):** install the [Antigravity CLI](https://antigravity.google/download#antigravity-cli),
+  run `agy`, and sign in with your Google account. CSwapBar auto-spawns `agy`'s background hub
+  and reads quota straight from it.
+- **IDE or VS Code extension:** install the [Antigravity IDE](https://antigravity.google/download)
+  or the [Antigravity extension for VS Code](https://marketplace.visualstudio.com/items?itemName=Google.google-antigravity),
+  open it, and sign in with your Google account. CSwapBar picks up that same local login.
+
+Either way, turn on the **Antigravity** icon in CSwapBar's Settings after signing in — usage
+bars appear once a valid local login is found, no separate step inside CSwapBar itself.
 
 ## Requirements
 
