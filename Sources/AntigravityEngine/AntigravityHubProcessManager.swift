@@ -133,6 +133,20 @@ final class AntigravityHubProcessManager: @unchecked Sendable {
             "--app_data_dir=antigravity",
             "--csrf_token=\(csrfToken)"
         ]
+        var env = ProcessInfo.processInfo.environment
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let extraPaths = [
+            "\(home)/.local/bin",
+            "\(home)/.gemini/bin",
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin", "/bin", "/usr/sbin", "/sbin"
+        ]
+        let currentPath = env["PATH"] ?? ""
+        env["PATH"] = (extraPaths + [currentPath]).filter { !$0.isEmpty }.joined(separator: ":")
+        env["AGY_ENABLE_HUB"] = "1"
+        env["ANTIGRAVITY_VSCODE_HOST"] = "1"
+        proc.environment = env
         proc.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
         proc.standardOutput = FileHandle.nullDevice
         proc.standardError = FileHandle.nullDevice
@@ -148,7 +162,7 @@ final class AntigravityHubProcessManager: @unchecked Sendable {
         setManagedProcess(process: proc, endpoint: endpoint)
         DiagnosticLog.log(logTag, "spawned background agy hub (pid \(proc.processIdentifier), port \(port))")
 
-        let ready = await waitForReadiness(endpoint: endpoint, timeout: 6.0)
+        let ready = await waitForReadiness(endpoint: endpoint, timeout: 12.0)
         if !ready {
             DiagnosticLog.log(logTag, "spawned agy hub did not respond within timeout")
             terminate()
@@ -183,10 +197,10 @@ final class AntigravityHubProcessManager: @unchecked Sendable {
         while Date() < deadline {
             if !isProcessRunning { return false }
 
-            if (try? await AntigravityHubClient.retrieveQuotaSummaryJSON(endpoint: endpoint)) != nil {
+            if (try? await AntigravityHubClient.retrieveQuotaSummaryJSON(endpoint: endpoint, timeoutInterval: 1.5)) != nil {
                 return true
             }
-            try? await Task.sleep(nanoseconds: 150_000_000) // 150ms
+            try? await Task.sleep(nanoseconds: 200_000_000) // 200ms
         }
         return false
     }

@@ -4,13 +4,13 @@ import Foundation
 /// Antigravity CLI's own UI and its VS Code extensions use, and the API
 /// CodexBar's "cli" source reads. Confirmed against a real running hub.
 enum AntigravityHubClient {
-    static func retrieveQuotaSummaryJSON(endpoint: AntigravityHubEndpoint) async throws -> Any {
+    static func retrieveQuotaSummaryJSON(endpoint: AntigravityHubEndpoint, timeoutInterval: TimeInterval = 5) async throws -> Any {
         guard let url = URL(string: "http://127.0.0.1:\(endpoint.port)/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary") else {
             throw AntigravityEngineError.network("invalid local hub URL")
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 5
+        request.timeoutInterval = timeoutInterval
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("1", forHTTPHeaderField: "Connect-Protocol-Version")
         request.setValue(endpoint.csrfToken, forHTTPHeaderField: "X-Codeium-Csrf-Token")
