@@ -73,16 +73,18 @@ final class StatusBarController: NSObject {
             let provider = store.provider(for: kind)
             let (top, bottom) = provider.accounts.menuBarPercentages()
             guard let button = slot.button else { continue }
-            if top == nil, bottom == nil, case .glyph(let glyph) = kind.iconSource,
-               let balance = provider.accounts.lazy.compactMap(\.balance).first {
-                // A balance-only provider has no bars to draw: its logo and
-                // remaining credit say more.
-                button.image = MenuBarIcon.glyph(glyph)
-                button.title = " \(balance.total)"
-            } else {
-                button.image = MenuBarIcon.make(topPct: top, bottomPct: bottom)
-                button.title = top.map { " \(Int($0))%" } ?? ""
-            }
+            let style = MenuBarStyle.current
+            // A balance-only provider (DeepSeek) has no bars to draw; its
+            // remaining credit stands in for the percentage.
+            let balance = provider.accounts.lazy.compactMap(\.balance).first
+            let hasBars = balance == nil || top != nil || bottom != nil
+            let text = style.showsText ? balance.map(\.total) ?? top.map { "\(Int($0))%" } : nil
+            let showText = text != nil
+            let showBars = style.showsBars && hasBars
+            // Whatever the style, never leave a slot blank: fall back to the logo.
+            let showIcon = style.showsIcon || (!showText && !showBars)
+            button.image = MenuBarIcon.make(icon: showIcon ? kind.iconSource : nil, bars: showBars ? (top, bottom) : nil)
+            button.title = text.map { " \($0)" } ?? ""
             button.tag = index
             button.setAccessibilityLabel("CSwapBar \(kind.title)")
         }

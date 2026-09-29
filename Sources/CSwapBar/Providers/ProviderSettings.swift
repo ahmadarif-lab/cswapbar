@@ -9,7 +9,12 @@ enum ProviderSettings {
     static let orderKey = "cswapbar.provider.order"
 
     static func registerDefaults() {
-        var defaults: [String: Any] = [orderKey: encodeOrder(ProviderKind.allCases)]
+        var defaults: [String: Any] = [
+            orderKey: encodeOrder(ProviderKind.allCases),
+            MenuBarStyle.iconKey: false,
+            MenuBarStyle.barsKey: true,
+            MenuBarStyle.textKey: true,
+        ]
         for kind in ProviderKind.allCases {
             defaults[kind.showDefaultsKey] = kind.defaultEnabled
         }
@@ -57,5 +62,27 @@ enum ProviderSettings {
 
     static func encodeOrder(_ kinds: [ProviderKind]) -> String {
         kinds.map(\.rawValue).joined(separator: ",")
+    }
+}
+
+/// What every provider's menu bar item shows: its logo, its usage bars,
+/// its percentage (or balance, for DeepSeek) -- any combination. The
+/// defaults (bars + percentage) are the original look.
+struct MenuBarStyle {
+    static let iconKey = "cswapbar.menubar.icon"
+    static let barsKey = "cswapbar.menubar.bars"
+    static let textKey = "cswapbar.menubar.text"
+
+    let showsIcon: Bool
+    let showsBars: Bool
+    let showsText: Bool
+
+    static var current: MenuBarStyle {
+        let defaults = UserDefaults.standard
+        return MenuBarStyle(
+            showsIcon: defaults.bool(forKey: iconKey),
+            showsBars: defaults.bool(forKey: barsKey),
+            showsText: defaults.bool(forKey: textKey)
+        )
     }
 }

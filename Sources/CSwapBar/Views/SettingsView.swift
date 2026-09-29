@@ -192,6 +192,9 @@ private struct GeneralSettings: View {
     @AppStorage(ProviderKind.antigravity.showDefaultsKey) private var showAntigravity = ProviderKind.antigravity.defaultEnabled
     @AppStorage(ProviderKind.zai.showDefaultsKey) private var showZai = ProviderKind.zai.defaultEnabled
     @AppStorage(ProviderKind.deepseek.showDefaultsKey) private var showDeepSeek = ProviderKind.deepseek.defaultEnabled
+    @AppStorage(MenuBarStyle.iconKey) private var menuBarIcon = false
+    @AppStorage(MenuBarStyle.barsKey) private var menuBarBars = true
+    @AppStorage(MenuBarStyle.textKey) private var menuBarText = true
     @State private var startsAtLogin = LoginItem.isEnabled
 
     var body: some View {
@@ -214,6 +217,15 @@ private struct GeneralSettings: View {
             }
         } header: {
             SectionTitle("Menu Bar", help: "Drag ≡ to change the order. A provider switched off here is off entirely -- no polling, no scheduled warm-up. With every provider off, a single CSwapBar icon stays in the menu bar for Settings and Quit; opening CSwapBar again also shows Settings.")
+        }
+        Section(compact: "Menu Bar Shows", help: "Applies to every provider's menu bar item. DeepSeek has no usage bars and shows its balance in place of the percentage. At least one stays on.") {
+            // The last one still on can't be switched off, so no item ends up blank.
+            Toggle("Provider icon", isOn: $menuBarIcon)
+                .disabled(menuBarIcon && !menuBarBars && !menuBarText)
+            Toggle("Usage bars", isOn: $menuBarBars)
+                .disabled(menuBarBars && !menuBarIcon && !menuBarText)
+            Toggle("Percentage", isOn: $menuBarText)
+                .disabled(menuBarText && !menuBarIcon && !menuBarBars)
         }
         Section(compact: "Behaviour") {
             Toggle("Start at login", isOn: $startsAtLogin)
