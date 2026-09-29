@@ -11,6 +11,7 @@ final class ProviderStore: ObservableObject {
     let antigravity = AntigravityProvider()
     let updater = Updater()
 
+    private lazy var warmupScheduler = WarmupScheduler { [unowned self] in [claude, antigravity, zai] }
     private var cancellables: Set<AnyCancellable> = []
     private var lastAppliedShownKinds: Set<ProviderKind>?
 
@@ -31,6 +32,8 @@ final class ProviderStore: ObservableObject {
             .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in self?.applyEnabledProvidersFromSettings() }
             .store(in: &cancellables)
+
+        warmupScheduler.start()
     }
 
     func provider(for kind: ProviderKind) -> any Provider {

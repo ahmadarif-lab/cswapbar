@@ -6,17 +6,12 @@ struct ClaudeDropdownExtras: View {
     @ObservedObject var provider: ClaudeProvider
 
     var body: some View {
-        SectionDivider()
-        SectionHeader(title: "Warm-up")
-        ActionRow(
-            icon: "flame",
-            title: provider.isWarmingUp ? "Warming up…" : "Warm up all accounts",
+        WarmupDropdownSection(
+            provider: provider,
+            title: "Warm up all accounts",
             subtitle: warmupSubtitle,
-            tint: Theme.accent,
-            disabled: provider.isWarmingUp || provider.accounts.count < 2
-        ) {
-            Task { await provider.warmupAll() }
-        }
+            disabled: provider.accounts.isEmpty
+        )
 
         SectionDivider()
         SectionHeader(title: "Manage")

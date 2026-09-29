@@ -67,12 +67,44 @@ public final class ZAIEngine: @unchecked Sendable {
         }
     }
 
-    private func fetchAccount(apiKey: String) async throws -> ZAIAccountSummary {
-        var request = URLRequest(url: region.baseURL.appendingPathComponent("api/monitor/usage/quota/limit"))
-        request.httpMethod = "GET"
+    /// Sends one tiny chat message on the Coding Plan endpoint so the plan's
+    /// 5-hour window starts counting now. The model is picked from the
+    /// endpoint's own model list (preferring a light "air" model) rather
+    /// than hard-coded, since GLM model names churn between releases.
+    public func sendWarmupMessage() async throws {
+        guard let apiKey = try keychain.getAPIKey(), !apiKey.isEmpty else {
+            throw ZAIEngineError.notConfigured
+        }
+        let model = await warmupModel(apiKey: apiKey)
+        var request = URLRequest(url: region.baseURL.appendingPathComponent("api/coding/paas/v4/chat/completions"))
+        request.httpMethod = "POST"
+        request.timeoutInterval = 60
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "model": model,
+            "messages": [["role": "user", "content": "halo"]],
+            "max_tokens": 16,
+            "stream": false,
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        _ = try await send(request)
+        DiagnosticLog.log(logTag, "warm-up message sent (model \(model))")
+    }
+
+    private func warmupModel(apiKey: String) async -> String {
+        let fallback = "glm-4.5-air"
+        var request = URLRequest(url: region.baseURL.appendingPathComponent("api/coding/paas/v4/models"))
         request.timeoutInterval = 10
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        guard let data = try? await send(request),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let list = json["data"] as? [[String: Any]] else { return fallback }
+        let ids = list.compactMap { $0["id"] as? String }
+        return ids.first { $0.lowercased().contains("air") } ?? ids.first ?? fallback
+    }
 
+    private func send(_ request: URLRequest) async throws -> Data {
         let data: Data
         let response: URLResponse
         do {
@@ -87,6 +119,15 @@ public final class ZAIEngine: @unchecked Sendable {
             let body = String(decoding: data, as: UTF8.self).prefix(300)
             throw ZAIEngineError.http(http.statusCode, String(body))
         }
+        return data
+    }
+
+    private func fetchAccount(apiKey: String) async throws -> ZAIAccountSummary {
+        var request = URLRequest(url: region.baseURL.appendingPathComponent("api/monitor/usage/quota/limit"))
+        request.httpMethod = "GET"
+        request.timeoutInterval = 10
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        let data = try await send(request)
 
         let decoded: ZAIQuotaResponse
         do {

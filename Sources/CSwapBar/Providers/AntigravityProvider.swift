@@ -3,13 +3,15 @@ import Foundation
 import ProviderKit
 
 @MainActor
-final class AntigravityProvider: ObservableObject, Provider {
+final class AntigravityProvider: ObservableObject, WarmingUp {
     let kind: ProviderKind = .antigravity
 
     @Published private(set) var accounts: [ProviderAccount] = []
     @Published private(set) var lastUpdated: Date?
     @Published var isRefreshing = false
     @Published var errorMessage: String?
+    @Published private(set) var isWarmingUp = false
+    @Published private(set) var warmupStatusText: String?
     /// Non-nil while auto-detect/manual-token entry is running, surfaced by
     /// the "Add account" sheet.
     @Published private(set) var isConnecting = false
@@ -72,6 +74,28 @@ final class AntigravityProvider: ObservableObject, Provider {
             )
         }
         return ProviderAccount(id: "antigravity", displayName: "Antigravity account", pools: pools)
+    }
+
+    // MARK: - Warm-up
+
+    func warmup() async {
+        guard !isWarmingUp, isConfigured else { return }
+        isWarmingUp = true
+        warmupStatusText = "Sending warm-up message…"
+        defer { isWarmingUp = false }
+        do {
+            let engine = engine
+            try await Task.detached { try engine.sendWarmupMessages() }.value
+            warmupStatusText = "Warm-up complete."
+        } catch {
+            warmupStatusText = "Warm-up failed: \(error.localizedDescription)"
+            DiagnosticLog.log("antigravity", "warm-up failed: \(DiagnosticLog.describe(error))")
+        }
+        await refresh()
+        try? await Task.sleep(nanoseconds: 4_000_000_000)
+        if warmupStatusText == "Warm-up complete." {
+            warmupStatusText = nil
+        }
     }
 
     // MARK: - Credential management

@@ -3,7 +3,7 @@ import ProviderKit
 import SwiftUI
 import ZAIEngine
 
-private enum SettingsPage: String, CaseIterable, Identifiable {
+enum SettingsPage: String, CaseIterable, Identifiable {
     case general
     case claude, antigravity, zai
 
@@ -33,6 +33,9 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(width: 860, height: 600)
+        .onReceive(NotificationCenter.default.publisher(for: SettingsWindow.showPageNotification)) { note in
+            if let requested = note.object as? SettingsPage { page = requested }
+        }
     }
 
     private var sidebar: some View {
@@ -112,6 +115,73 @@ private struct SettingsOptions: View {
     }
 }
 
+/// A grouped Form section header pulled up into the gap above it, with an
+/// optional ⓘ for its explanation. macOS leaves a tall gap above a header
+/// and, unlike iOS, has no `listSectionSpacing` to shrink it, so a negative
+/// top padding is the only knob.
+struct SectionTitle: View {
+    let title: String
+    let help: String?
+    init(_ title: String, help: String? = nil) {
+        self.title = title
+        self.help = help
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Text(title)
+            if let help { InfoButton(text: help) }
+        }
+        .padding(.top, -14)
+    }
+}
+
+/// A page's own title row (provider name), with an optional ⓘ.
+struct PageTitle: View {
+    let title: String
+    var help: String?
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(title).font(.title2.bold()).foregroundStyle(.primary)
+            if let help { InfoButton(text: help, size: 13) }
+        }
+    }
+}
+
+/// ⓘ that shows its text as a tooltip on hover and in a popover on click --
+/// explanations stay one click away instead of long captions on the page.
+struct InfoButton: View {
+    let text: String
+    var size: CGFloat = 11.5
+    @State private var isShowing = false
+
+    var body: some View {
+        Button {
+            isShowing.toggle()
+        } label: {
+            Image(systemName: "info.circle")
+                .font(.system(size: size))
+                .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.borderless)
+        .help(text)
+        .popover(isPresented: $isShowing, arrowEdge: .bottom) {
+            Text(text)
+                .font(.system(size: 12))
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 260, alignment: .leading)
+                .padding(12)
+        }
+    }
+}
+
+extension Section where Parent == SectionTitle, Footer == EmptyView, Content: View {
+    init(compact title: String, help: String? = nil, @ViewBuilder content: () -> Content) {
+        self.init(content: content, header: { SectionTitle(title, help: help) })
+    }
+}
+
 // MARK: - General
 
 private struct GeneralSettings: View {
@@ -137,16 +207,12 @@ private struct GeneralSettings: View {
                         .labelsHidden()
                         .toggleStyle(.switch)
                         .controlSize(.small)
-                        .disabled(isLastShown(kind))
                 }
             }
         } header: {
-            Text("Menu Bar")
-        } footer: {
-            Text("Drag ≡ to change the order. One item always stays in the menu bar so CSwapBar can be reached.")
-                .foregroundStyle(.secondary)
+            SectionTitle("Menu Bar", help: "Drag ≡ to change the order. A provider switched off here is off entirely -- no polling, no scheduled warm-up. With every provider off, a single CSwapBar icon stays in the menu bar for Settings and Quit; opening CSwapBar again also shows Settings.")
         }
-        Section("Behaviour") {
+        Section(compact: "Behaviour") {
             Toggle("Start at login", isOn: $startsAtLogin)
                 .onChange(of: startsAtLogin) { _, enabled in
                     LoginItem.setEnabled(enabled)
@@ -158,10 +224,7 @@ private struct GeneralSettings: View {
                 NSWorkspace.shared.activateFileViewerSelecting([DiagnosticLog.fileURL])
             }
         } header: {
-            Text("Diagnostics")
-        } footer: {
-            Text("Records connection errors for every provider -- attach this file when reporting a problem.")
-                .foregroundStyle(.secondary)
+            SectionTitle("Diagnostics", help: "Records connection errors for every provider -- attach this file when reporting a problem.")
         }
     }
 
@@ -181,11 +244,6 @@ private struct GeneralSettings: View {
         }
     }
 
-    private func isShown(_ kind: ProviderKind) -> Bool { shown(kind).wrappedValue }
-
-    private func isLastShown(_ kind: ProviderKind) -> Bool {
-        isShown(kind) && ProviderKind.allCases.filter(isShown).count == 1
-    }
 }
 
 /// App icon, name, version and the update check.
@@ -313,9 +371,9 @@ private struct ClaudeSettings: View {
 
     var body: some View {
         Section {
-            Text("Claude").font(.title2.bold()).foregroundStyle(.primary)
+            PageTitle(title: "Claude", help: "Claude Code accounts managed by CSwapBar -- switch between them from the menu bar dropdown.")
         }
-        Section("Accounts") {
+        Section {
             if provider.accounts.isEmpty {
                 Text("No managed accounts yet.")
                     .foregroundStyle(.secondary)
@@ -324,14 +382,20 @@ private struct ClaudeSettings: View {
                     AccountManageRow(provider: provider, account: account)
                 }
             }
+        } header: {
+            SectionTitle("Accounts")
         }
         Section {
             Button("Add current login") { Task { await provider.addFromCurrentLogin() } }
             Button("Add from setup-token…") { provider.openAddTokenWindow() }
             Button("Refresh current credentials") { Task { await provider.refreshCredentials() } }
         } header: {
-            Text("Add")
+            SectionTitle("Add")
         }
+        WarmupScheduleSection(
+            kind: .claude,
+            explanation: "At each time, every managed account is sent a short claude -p message so its 5-hour window starts counting."
+        )
     }
 }
 
@@ -345,11 +409,9 @@ private struct ZAISettings: View {
 
     var body: some View {
         Section {
-            Text("z.ai").font(.title2.bold()).foregroundStyle(.primary)
-            Text("GLM Coding Plan quota, from z.ai's own Settings → API keys page.")
-                .foregroundStyle(.secondary)
+            PageTitle(title: "z.ai", help: "GLM Coding Plan quota, using an API key from z.ai's own Settings → API keys page.")
         }
-        Section("Account") {
+        Section(compact: "Account") {
             if provider.isConfigured {
                 LabeledContent("Status", value: "API key configured")
                 Button("Remove account", role: .destructive) {
@@ -376,6 +438,10 @@ private struct ZAISettings: View {
                 .disabled(apiKey.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
+        WarmupScheduleSection(
+            kind: .zai,
+            explanation: "At each time, one short chat message is sent with the saved API key so the 5-hour window starts counting."
+        )
     }
 }
 
@@ -388,19 +454,14 @@ private struct AntigravitySettings: View {
 
     var body: some View {
         Section {
-            Text("Antigravity").font(.title2.bold()).foregroundStyle(.primary)
-            Text("Gemini + Claude/GPT quota, auto-detected from the agy CLI's or the Antigravity IDE's own local login.")
-                .foregroundStyle(.secondary)
+            PageTitle(title: "Antigravity", help: "Gemini + Claude/GPT quota, auto-detected from the agy CLI's or the Antigravity IDE's own local login.")
         }
         Section {
             LabeledContent("Right now", value: provider.isConfigured ? "Quota is reachable" : "No CLI or fallback connected")
         } header: {
-            Text("Status")
-        } footer: {
-            Text("Quota is fetched from an active agy CLI session, or auto-started via a local background hub if agy is installed. A fallback account can also be connected below.")
-                .foregroundStyle(.secondary)
+            SectionTitle("Status", help: "Quota is fetched from an active agy CLI session, or from a local background hub CSwapBar starts itself if agy is installed. A fallback account can also be connected below.")
         }
-        Section("Fallback account") {
+        Section(compact: "Fallback account") {
             if let error = provider.errorMessage {
                 Text(error).foregroundStyle(Theme.high)
             }
@@ -420,15 +481,15 @@ private struct AntigravitySettings: View {
                 .disabled(provider.isConnecting)
                 Toggle("Paste a refresh token manually instead", isOn: $showManualEntry)
                 if showManualEntry {
-                    Text("The `refresh_token` value from `~/.gemini/jetski-standalone-oauth-token`'s `token` object.")
-                        .font(.system(size: 10.5))
-                        .foregroundStyle(.secondary)
                     // A labeled TextField as a bare Section row can collapse
                     // its editable area to nothing in this Form -- an
                     // explicit caption + a separately-styled field is more
                     // reliable.
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Refresh token").font(.system(size: 11)).foregroundStyle(.secondary)
+                        HStack(spacing: 4) {
+                            Text("Refresh token").font(.system(size: 11)).foregroundStyle(.secondary)
+                            InfoButton(text: "The refresh_token value from ~/.gemini/jetski-standalone-oauth-token's token object.", size: 10.5)
+                        }
                         TextField("", text: $manualToken) // plain, not SecureField -- see AddZAISheet for why
                             .textFieldStyle(.roundedBorder)
                     }
@@ -442,5 +503,10 @@ private struct AntigravitySettings: View {
                 }
             }
         }
+        WarmupScheduleSection(
+            kind: .antigravity,
+            explanation: "At each time, the agy CLI sends one short message per quota pool (Gemini and Claude/GPT) so each 5-hour window starts counting. Needs agy installed."
+        )
     }
 }
+

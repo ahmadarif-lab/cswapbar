@@ -93,6 +93,60 @@ public final class AntigravityEngine: @unchecked Sendable {
         return AntigravityQuotaParsing.summarize(json)
     }
 
+    /// Sends one throwaway `agy -p` prompt per quota pool (Gemini and
+    /// Claude/GPT) so each pool's 5-hour window starts counting now. Model
+    /// ids come from `agy models` at run time rather than being hard-coded,
+    /// since they change with every Antigravity release. Blocking -- call
+    /// off the main actor.
+    public func sendWarmupMessages() throws {
+        guard let agy = AntigravityHubProcessManager.findAgyBinary() else {
+            throw AntigravityEngineError.warmup("agy CLI not found -- install it to warm up Antigravity.")
+        }
+        let env = AntigravityHubProcessManager.agyEnvironment()
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let listing = try Subprocess.run(agy, ["models"], environment: env, currentDirectory: home, timeout: 30)
+        let models = Self.warmupModels(fromListing: listing.stdout)
+        guard !models.isEmpty else {
+            throw AntigravityEngineError.warmup("agy models listed nothing to warm up.")
+        }
+        var failures: [String] = []
+        for model in models {
+            do {
+                let result = try Subprocess.run(
+                    agy, ["--model", model, "--print-timeout", "120s", "-p", "halo"],
+                    environment: env, currentDirectory: home, timeout: 150
+                )
+                if result.status == 0 {
+                    DiagnosticLog.log(logTag, "warm-up message sent (model \(model))")
+                } else {
+                    failures.append(model)
+                    DiagnosticLog.log(logTag, "warm-up with \(model) exited \(result.status): \(result.stderr.prefix(300))")
+                }
+            } catch {
+                failures.append(model)
+                DiagnosticLog.log(logTag, "warm-up with \(model) failed: \(DiagnosticLog.describe(error))")
+            }
+        }
+        if failures.count == models.count {
+            throw AntigravityEngineError.warmup("Warm-up failed for \(failures.joined(separator: ", ")).")
+        }
+    }
+
+    /// One cheap model per pool from `agy models` output (`<id>\t<name>`
+    /// per line): the lowest-effort Gemini Flash, and the first Claude (or
+    /// GPT) model for the shared Claude/GPT pool.
+    static func warmupModels(fromListing listing: String) -> [String] {
+        let ids = listing.split(separator: "\n").compactMap { line -> String? in
+            let id = line.split(separator: "\t").first.map(String.init)?.trimmingCharacters(in: .whitespaces)
+            guard let id, !id.isEmpty, !id.contains(" ") else { return nil }
+            return id
+        }
+        let flash = ids.filter { $0.hasPrefix("gemini") && $0.contains("flash") }
+        let gemini = flash.first { $0.hasSuffix("-low") } ?? flash.first ?? ids.first { $0.hasPrefix("gemini") }
+        let other = ids.first { $0.hasPrefix("claude") } ?? ids.first { $0.hasPrefix("gpt") }
+        return [gemini, other].compactMap { $0 }
+    }
+
     /// Stops any background hub process spawned and managed by CSwapBar.
     public func stopManagedHub() {
         AntigravityHubProcessManager.shared.terminate()

@@ -9,7 +9,7 @@ import SwapEngine
 /// extras (add-account, warm-up) live as plain methods beyond the
 /// `AccountMutating` protocol; views reach them via the concrete type.
 @MainActor
-final class ClaudeProvider: ObservableObject, AccountMutating {
+final class ClaudeProvider: ObservableObject, AccountMutating, WarmingUp {
     let kind: ProviderKind = .claude
 
     @Published private(set) var accounts: [ProviderAccount] = []
@@ -175,17 +175,23 @@ final class ClaudeProvider: ObservableObject, AccountMutating {
     }
 
     // MARK: - Warm-up all accounts
-    // Faithful port of the `claude-warmup` zsh function: rotate through every
-    // managed account, send a throwaway `claude -p "halo"`, then switch back.
+    // Port of the `claude-warmup` zsh function: rotate through every managed
+    // account, send a throwaway `claude -p "halo"`, then switch back. Unlike
+    // the original it also warms a lone account (no switching needed), since
+    // a scheduled warm-up is just as useful with one.
+
+    func warmup() async { await warmupAll() }
 
     func warmupAll() async {
         guard !isWarmingUp else { return }
+        if rawAccounts.isEmpty { await refresh() }
         let ordered = rawAccounts.sorted { $0.number < $1.number }
-        guard ordered.count > 1 else {
-            warmupStatusText = "Only one managed account -- nothing to warm up."
+        guard !ordered.isEmpty else {
+            warmupStatusText = "No managed accounts -- nothing to warm up."
             return
         }
         let originalNumber = activeRawAccount?.number ?? ordered.first?.number
+        var currentNumber = activeRawAccount?.number
 
         isWarmingUp = true
         warmupStatusText = nil
@@ -197,19 +203,22 @@ final class ClaudeProvider: ObservableObject, AccountMutating {
         for (index, account) in ordered.enumerated() {
             if Task.isCancelled { break }
             warmupProgress = (index + 1, ordered.count)
-            warmupStatusText = "Switching to \(account.displayName)…"
-            do {
-                try await engine.switchTo(account.number)
-            } catch {
-                errorMessage = error.localizedDescription
-                DiagnosticLog.log("claude", "warm-up: switching to \(account.displayName) failed: \(DiagnosticLog.describe(error))")
-                continue
+            if account.number != currentNumber {
+                warmupStatusText = "Switching to \(account.displayName)…"
+                do {
+                    try await engine.switchTo(account.number)
+                    currentNumber = account.number
+                } catch {
+                    errorMessage = error.localizedDescription
+                    DiagnosticLog.log("claude", "warm-up: switching to \(account.displayName) failed: \(DiagnosticLog.describe(error))")
+                    continue
+                }
             }
             warmupStatusText = "Sending warm-up message to \(account.displayName)…"
             _ = try? await shell.claude(["-p", "halo"])
         }
 
-        if let originalNumber {
+        if let originalNumber, originalNumber != currentNumber {
             warmupStatusText = "Switching back to original account…"
             try? await engine.switchTo(originalNumber)
         }

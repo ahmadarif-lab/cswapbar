@@ -3,13 +3,15 @@ import ProviderKit
 import ZAIEngine
 
 @MainActor
-final class ZAIProvider: ObservableObject, Provider {
+final class ZAIProvider: ObservableObject, WarmingUp {
     let kind: ProviderKind = .zai
 
     @Published private(set) var accounts: [ProviderAccount] = []
     @Published private(set) var lastUpdated: Date?
     @Published var isRefreshing = false
     @Published var errorMessage: String?
+    @Published private(set) var isWarmingUp = false
+    @Published private(set) var warmupStatusText: String?
 
     private let engine = ZAIEngine.shared
     private var refreshTask: Task<Void, Never>?
@@ -67,6 +69,27 @@ final class ZAIProvider: ObservableObject, Provider {
             id: "zai", displayName: "z.ai account", subtitle: summary.planName.map { "\($0) plan" },
             pools: pools, detailRows: detailRows
         )
+    }
+
+    // MARK: - Warm-up
+
+    func warmup() async {
+        guard !isWarmingUp, isConfigured else { return }
+        isWarmingUp = true
+        warmupStatusText = "Sending warm-up message…"
+        defer { isWarmingUp = false }
+        do {
+            try await engine.sendWarmupMessage()
+            warmupStatusText = "Warm-up complete."
+        } catch {
+            warmupStatusText = "Warm-up failed: \(error.localizedDescription)"
+            DiagnosticLog.log("zai", "warm-up failed: \(DiagnosticLog.describe(error))")
+        }
+        await refresh()
+        try? await Task.sleep(nanoseconds: 4_000_000_000)
+        if warmupStatusText == "Warm-up complete." {
+            warmupStatusText = nil
+        }
     }
 
     // MARK: - Credential management

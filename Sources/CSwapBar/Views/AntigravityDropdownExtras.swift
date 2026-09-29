@@ -5,6 +5,9 @@ struct AntigravityDropdownExtras: View {
     @ObservedObject var provider: AntigravityProvider
 
     var body: some View {
+        if provider.isConfigured {
+            WarmupDropdownSection(provider: provider)
+        }
         SectionDivider()
         SectionHeader(title: "Manage")
         if provider.hasStoredCredential {

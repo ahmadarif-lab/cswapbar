@@ -10,6 +10,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AntigravityEngine.shared.stopManagedHub()
     }
 
+    /// Opening CSwapBar again (Finder, Launchpad, Spotlight) shows Settings --
+    /// the way back in when every provider's menu bar item is switched off.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        SettingsWindow.show()
+        return false
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard !anotherCopyIsRunning() else {
             NSApp.terminate(nil)

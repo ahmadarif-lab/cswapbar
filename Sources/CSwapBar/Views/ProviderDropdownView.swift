@@ -89,11 +89,11 @@ struct ProviderDropdownView<P: Provider, Extra: View>: View {
         return "Updated \(formatter.localizedString(for: date, relativeTo: Date()))"
     }
 
-    /// Update checking lives only in Settings > General now (see
-    /// `AboutHeader`) -- repeating it in every provider's dropdown was as
-    /// redundant as the "Start at login" row that used to sit here too.
+    /// Installing an update lives only in Settings > General (see
+    /// `AboutHeader`); the dropdown just points there once one is found.
     private var footer: some View {
         VStack(spacing: 0) {
+            UpdateAvailableRow()
             ActionRow(icon: "arrow.clockwise", title: "Refresh now") {
                 Task { await provider.refresh() }
             }
@@ -105,5 +105,26 @@ struct ProviderDropdownView<P: Provider, Extra: View>: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+/// "Update available" row, shown only once the background check has found a
+/// newer release; clicking it opens Settings on General, where the actual
+/// install button lives.
+private struct UpdateAvailableRow: View {
+    @EnvironmentObject var updater: Updater
+
+    var body: some View {
+        if let release = updater.availableUpdate {
+            ActionRow(
+                icon: "arrow.down.circle.fill",
+                title: "Update available",
+                detail: "v\(release.version)",
+                detailTint: Theme.accent,
+                tint: Theme.accent
+            ) {
+                SettingsWindow.show(page: .general)
+            }
+        }
     }
 }

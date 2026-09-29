@@ -50,11 +50,23 @@ final class StatusBarController: NSObject {
 
     private func refresh() {
         let kinds = ProviderSettings.shownKinds()
-        if kinds.count != slots.count { rebuildSlots(count: kinds.count) }
+        // With every provider switched off, one slot stays as a plain
+        // CSwapBar item (Settings/Quit only) so the app remains reachable.
+        let slotCount = max(kinds.count, 1)
+        if slotCount != slots.count { rebuildSlots(count: slotCount) }
         let positioned = slotsLeftToRight()
         if kinds != slotKinds || positioned != orderedSlots { close() }
         orderedSlots = positioned
         slotKinds = kinds
+
+        if kinds.isEmpty, let button = orderedSlots.first?.button {
+            let image = NSImage(systemSymbolName: "switch.2", accessibilityDescription: "CSwapBar")
+            image?.isTemplate = true
+            button.image = image
+            button.title = ""
+            button.tag = 0
+            button.setAccessibilityLabel("CSwapBar")
+        }
 
         for (index, slot) in orderedSlots.enumerated() where index < slotKinds.count {
             let kind = slotKinds[index]
@@ -110,12 +122,13 @@ final class StatusBarController: NSObject {
     // MARK: - Clicks
 
     @objc private func clicked(_ button: NSStatusBarButton) {
-        guard let event = NSApp.currentEvent, slotKinds.indices.contains(button.tag) else { return }
-        let kind = slotKinds[button.tag]
-        if event.type == .rightMouseDown || event.modifierFlags.contains(.control) {
+        guard let event = NSApp.currentEvent else { return }
+        guard slotKinds.indices.contains(button.tag),
+              event.type != .rightMouseDown, !event.modifierFlags.contains(.control) else {
             showContextMenu(from: button)
             return
         }
+        let kind = slotKinds[button.tag]
         if openKind == kind {
             close()
             return
@@ -182,16 +195,18 @@ final class StatusBarController: NSObject {
         openKind = nil
     }
 
-    @ViewBuilder
     static func dropdown(for kind: ProviderKind, store: ProviderStore) -> some View {
-        switch kind {
-        case .claude:
-            ProviderDropdownView(provider: store.claude) { ClaudeDropdownExtras(provider: store.claude) }
-        case .antigravity:
-            ProviderDropdownView(provider: store.antigravity) { AntigravityDropdownExtras(provider: store.antigravity) }
-        case .zai:
-            ProviderDropdownView(provider: store.zai) { ZAIDropdownExtras(provider: store.zai) }
+        Group {
+            switch kind {
+            case .claude:
+                ProviderDropdownView(provider: store.claude) { ClaudeDropdownExtras(provider: store.claude) }
+            case .antigravity:
+                ProviderDropdownView(provider: store.antigravity) { AntigravityDropdownExtras(provider: store.antigravity) }
+            case .zai:
+                ProviderDropdownView(provider: store.zai) { ZAIDropdownExtras(provider: store.zai) }
+            }
         }
+        .environmentObject(store.updater)
     }
 }
 

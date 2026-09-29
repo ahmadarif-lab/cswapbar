@@ -19,6 +19,7 @@ public enum AntigravityEngineError: LocalizedError, Equatable {
     case network(String)
     case decoding(String)
     case autoDetect(String)
+    case warmup(String)
 
     public var errorDescription: String? {
         switch self {
@@ -27,6 +28,7 @@ public enum AntigravityEngineError: LocalizedError, Equatable {
         case .network(let message): return "Antigravity request failed: \(message)"
         case .decoding(let message): return "Could not read Antigravity's response: \(message)"
         case .autoDetect(let message): return message
+        case .warmup(let message): return message
         }
     }
 }

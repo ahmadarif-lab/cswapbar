@@ -25,12 +25,16 @@ public enum Subprocess {
         _ executable: String,
         _ args: [String],
         stdin: Data? = nil,
+        environment: [String: String]? = nil,
+        currentDirectory: URL? = nil,
         timeout: TimeInterval
     ) throws -> SubprocessResult {
         _ = ignoreSigpipe
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = args
+        if let environment { process.environment = environment }
+        if let currentDirectory { process.currentDirectoryURL = currentDirectory }
         let outPipe = Pipe()
         let errPipe = Pipe()
         process.standardOutput = outPipe

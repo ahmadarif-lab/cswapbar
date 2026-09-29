@@ -68,6 +68,24 @@ final class AntigravityHubProcessManager: @unchecked Sendable {
         return nil
     }
 
+    /// The app's own environment with the usual CLI install dirs prepended to
+    /// PATH -- a GUI app launched from Finder inherits a bare PATH that
+    /// `agy` (and whatever it shells out to) wouldn't be found on.
+    static func agyEnvironment() -> [String: String] {
+        var env = ProcessInfo.processInfo.environment
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let extraPaths = [
+            "\(home)/.local/bin",
+            "\(home)/.gemini/bin",
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin", "/bin", "/usr/sbin", "/sbin"
+        ]
+        let currentPath = env["PATH"] ?? ""
+        env["PATH"] = (extraPaths + [currentPath]).filter { !$0.isEmpty }.joined(separator: ":")
+        return env
+    }
+
     private var isProcessRunning: Bool {
         lock.withLock { process?.isRunning ?? false }
     }
@@ -133,17 +151,7 @@ final class AntigravityHubProcessManager: @unchecked Sendable {
             "--app_data_dir=antigravity",
             "--csrf_token=\(csrfToken)"
         ]
-        var env = ProcessInfo.processInfo.environment
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let extraPaths = [
-            "\(home)/.local/bin",
-            "\(home)/.gemini/bin",
-            "/opt/homebrew/bin",
-            "/usr/local/bin",
-            "/usr/bin", "/bin", "/usr/sbin", "/sbin"
-        ]
-        let currentPath = env["PATH"] ?? ""
-        env["PATH"] = (extraPaths + [currentPath]).filter { !$0.isEmpty }.joined(separator: ":")
+        var env = Self.agyEnvironment()
         env["AGY_ENABLE_HUB"] = "1"
         env["ANTIGRAVITY_VSCODE_HOST"] = "1"
         proc.environment = env

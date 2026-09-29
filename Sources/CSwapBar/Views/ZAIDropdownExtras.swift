@@ -5,6 +5,9 @@ struct ZAIDropdownExtras: View {
     @ObservedObject var provider: ZAIProvider
 
     var body: some View {
+        if provider.isConfigured {
+            WarmupDropdownSection(provider: provider)
+        }
         SectionDivider()
         SectionHeader(title: "Manage")
         if provider.isConfigured {

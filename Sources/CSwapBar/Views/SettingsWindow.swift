@@ -12,7 +12,12 @@ enum SettingsWindow {
     /// controller's right-click menu can open Settings too.
     static weak var store: ProviderStore?
 
-    static func show() {
+    /// Posted to switch an already open Settings window to another page.
+    static let showPageNotification = Notification.Name("CSwapBar.SettingsWindow.showPage")
+
+    /// Brings Settings up, optionally on a given page (a fresh window always
+    /// starts on General).
+    static func show(page: SettingsPage? = nil) {
         guard let store else { return }
         if window == nil {
             let window = NSWindow(
@@ -34,6 +39,9 @@ enum SettingsWindow {
                 MainActor.assumeIsolated { close() }
             }
             self.window = window
+        }
+        if let page {
+            NotificationCenter.default.post(name: showPageNotification, object: page)
         }
         applyDockPolicy()
         window?.makeKeyAndOrderFront(nil)
