@@ -91,6 +91,19 @@ extension ProviderGlyph {
         "M47.6233 90.0215L54.2478 80.6157C55.2592 79.1492 56.9785 78.2389 58.799 78.2389H94.6524V90.0215H47.6233Z",
     ])
 
+    /// OpenCode's own `Mark` component (`packages/ui/src/components/logo.tsx`,
+    /// viewBox `0 0 16 20`), rescaled into this type's 100x100 one: uniform
+    /// scale 5, centered horizontally.
+    ///
+    /// Only the logo's outer path is used. Its second path fills the lower
+    /// half of the frame's inner square in a darker shade, which in this
+    /// single-color rendering would merge with the frame and leave a solid
+    /// block with a notch -- so the frame alone is what still reads as the
+    /// mark, at menu-bar size especially.
+    static let opencodeGo = ProviderGlyph(pathData: [
+        "M70 20H30V80H70V20ZM90 100H10V0H90V100Z",
+    ])
+
     /// CodexBar's `ProviderIcon-deepseek.svg`, rescaled from its
     /// `3.5 5.5 24.8 20` viewBox into this type's 100x100 one (centered).
     static let deepseek = ProviderGlyph(pathData: [

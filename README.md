@@ -6,7 +6,7 @@
 
 <p align="center">
   A native macOS menu bar app that tracks quota across several AI coding tools at once — Claude Code,
-  Antigravity, z.ai, and DeepSeek — each as its own menu bar icon you can show or hide from Settings.<br>
+  Antigravity, z.ai, DeepSeek, and OpenCode Go — each as its own menu bar icon you can show or hide from Settings.<br>
   For Claude, it also juggles several accounts: see every account's 5-hour and weekly usage at a
   glance, and switch between them with one click.<br>
   Claude's account engine is a Swift port of <a href="https://github.com/realiti4/claude-swap">claude-swap</a>
@@ -70,7 +70,7 @@ appears after a blocked launch.
 ## Screenshot
 
 <p align="center">
-  <img src="Resources/screenshots/hero.webp" alt="CSwapBar Settings window showing the Claude popover with multiple accounts and usage bars alongside menu bar toggles for Claude, Antigravity, z.ai, and DeepSeek and the Menu Bar Shows options" width="720">
+  <img src="Resources/screenshots/hero.webp" alt="CSwapBar Settings window showing the Claude popover with multiple accounts and usage bars alongside menu bar toggles for Claude, Antigravity, z.ai, DeepSeek, and OpenCode Go and the Menu Bar Shows options" width="720">
 </p>
 
 ## What it does
@@ -106,7 +106,8 @@ provider off, a single CSwapBar icon stays in the menu bar for Settings and Quit
 
 Every provider with a usage window also has a **warm-up**: a short throwaway message that starts its 5-hour window
 counting. Run it from the dropdown, or set one or more times of day (24-hour) in that provider's
-Settings page to run it on a schedule while CSwapBar is open.
+Settings page to run it on a schedule while CSwapBar is open. (OpenCode Go is the exception: its
+quota is read-only.)
 
 | Provider | Quota shown | Connecting |
 | --- | --- | --- |
@@ -114,6 +115,7 @@ Settings page to run it on a schedule while CSwapBar is open.
 | **Antigravity** | 5h + weekly, for both its Gemini pool and its Claude/GPT pool | needs the `agy` CLI, signed in — see [setup](#antigravity-setup) below |
 | **z.ai** (GLM Coding Plan) | 5h + weekly | paste an API key from z.ai's own Settings → API keys page |
 | **DeepSeek** | remaining API credit (paid + granted) — pay-as-you-go, so no windows or warm-up | paste an API key from platform.deepseek.com → API keys |
+| **OpenCode Go** | 5-hour + weekly + monthly subscription quota, with the spend behind each window | just run `opencode auth login opencode` once — CSwapBar reads the credentials OpenCode itself stores (`opencode.db`, or a v1-era `auth.json`), so there's nothing to set up here |
 
 ### Antigravity setup
 
@@ -133,6 +135,8 @@ not left running.
 - Claude Code — the `claude` CLI is only needed for Claude's warm-up
 - The [Antigravity CLI](https://antigravity.google/download#antigravity-cli) (`agy`), signed in —
   only for the Antigravity provider
+- An OpenCode Go subscription signed in once with `opencode auth login opencode` — only for the
+  OpenCode Go provider; CSwapBar reads the credentials OpenCode stores, and needs no CLI of its own
 - Xcode command line tools with Swift 5.10+, only if you build from source
 
 ## Build from source

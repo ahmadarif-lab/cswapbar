@@ -6,6 +6,7 @@ enum ProviderKind: String, CaseIterable, Identifiable {
     case antigravity
     case zai
     case deepseek
+    case opencodeGo
 
     var id: String { rawValue }
 
@@ -15,6 +16,7 @@ enum ProviderKind: String, CaseIterable, Identifiable {
         case .antigravity: return "Antigravity"
         case .zai: return "z.ai"
         case .deepseek: return "DeepSeek"
+        case .opencodeGo: return "OpenCode Go"
         }
     }
 
@@ -25,10 +27,22 @@ enum ProviderKind: String, CaseIterable, Identifiable {
         case .antigravity: return .glyph(.antigravity)
         case .zai: return .glyph(.zai)
         case .deepseek: return .glyph(.deepseek)
+        case .opencodeGo: return .glyph(.opencodeGo)
         }
     }
 
     var defaultEnabled: Bool { self == .claude }
+
+    /// How often this provider's own poll loop re-fetches. z.ai and Claude
+    /// are cheap and move fast; OpenCode Go's quota endpoint is an
+    /// undocumented, uncached server-side aggregate, so it's polled least.
+    var refreshInterval: TimeInterval {
+        switch self {
+        case .claude, .zai: return 30
+        case .antigravity, .deepseek: return 60
+        case .opencodeGo: return 120
+        }
+    }
 
     /// UserDefaults key for this provider's menu bar visibility.
     var showDefaultsKey: String { "cswapbar.show.\(rawValue)" }
@@ -46,6 +60,10 @@ enum ProviderKind: String, CaseIterable, Identifiable {
         case .zai: return Color(white: 0.82)
         // DeepSeek's own brand blue (#4D6BFE).
         case .deepseek: return Color(red: 0x4D / 255, green: 0x6B / 255, blue: 0xFE / 255)
+        // OpenCode's brand is monochrome too; this is the grey its own site
+        // leans on (#8E8B8B), deliberately darker than z.ai's so the two
+        // neutral marks stay apart in the Settings sidebar.
+        case .opencodeGo: return Color(white: 0x8E / 255)
         }
     }
 }

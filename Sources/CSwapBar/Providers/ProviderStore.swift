@@ -10,6 +10,7 @@ final class ProviderStore: ObservableObject {
     let zai = ZAIProvider()
     let antigravity = AntigravityProvider()
     let deepseek = DeepSeekProvider()
+    let opencodeGo = OpenCodeGoProvider()
     let updater = Updater()
 
     private lazy var warmupScheduler = WarmupScheduler { [unowned self] in [claude, antigravity, zai] }
@@ -21,7 +22,8 @@ final class ProviderStore: ObservableObject {
             claude.objectWillChange.eraseToAnyPublisher(),
             zai.objectWillChange.eraseToAnyPublisher(),
             antigravity.objectWillChange.eraseToAnyPublisher(),
-            deepseek.objectWillChange.eraseToAnyPublisher()
+            deepseek.objectWillChange.eraseToAnyPublisher(),
+            opencodeGo.objectWillChange.eraseToAnyPublisher()
         )
         .receive(on: DispatchQueue.main)
         .sink { [weak self] in self?.objectWillChange.send() }
@@ -44,6 +46,7 @@ final class ProviderStore: ObservableObject {
         case .antigravity: return antigravity
         case .zai: return zai
         case .deepseek: return deepseek
+        case .opencodeGo: return opencodeGo
         }
     }
 
@@ -58,7 +61,7 @@ final class ProviderStore: ObservableObject {
         for kind in ProviderKind.allCases {
             let provider = provider(for: kind)
             if shown.contains(kind) {
-                provider.startAutoRefresh(interval: kind == .claude || kind == .zai ? 30 : 60)
+                provider.startAutoRefresh(interval: kind.refreshInterval)
             } else {
                 provider.stopAutoRefresh()
             }

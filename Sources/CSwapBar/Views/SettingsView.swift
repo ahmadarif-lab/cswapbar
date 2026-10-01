@@ -5,7 +5,7 @@ import ZAIEngine
 
 enum SettingsPage: String, CaseIterable, Identifiable {
     case general
-    case claude, antigravity, zai, deepseek
+    case claude, antigravity, zai, deepseek, opencodeGo
 
     var id: String { rawValue }
     var kind: ProviderKind? {
@@ -15,6 +15,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .antigravity: return .antigravity
         case .zai: return .zai
         case .deepseek: return .deepseek
+        case .opencodeGo: return .opencodeGo
         }
     }
 
@@ -110,6 +111,7 @@ private struct SettingsOptions: View {
             case .antigravity: AntigravitySettings(provider: store.antigravity)
             case .zai: ZAISettings(provider: store.zai)
             case .deepseek: DeepSeekSettings(provider: store.deepseek)
+            case .opencodeGo: OpenCodeGoSettings(provider: store.opencodeGo)
             }
         }
         .formStyle(.grouped)
@@ -192,6 +194,7 @@ private struct GeneralSettings: View {
     @AppStorage(ProviderKind.antigravity.showDefaultsKey) private var showAntigravity = ProviderKind.antigravity.defaultEnabled
     @AppStorage(ProviderKind.zai.showDefaultsKey) private var showZai = ProviderKind.zai.defaultEnabled
     @AppStorage(ProviderKind.deepseek.showDefaultsKey) private var showDeepSeek = ProviderKind.deepseek.defaultEnabled
+    @AppStorage(ProviderKind.opencodeGo.showDefaultsKey) private var showOpenCodeGo = ProviderKind.opencodeGo.defaultEnabled
     @AppStorage(MenuBarStyle.iconKey) private var menuBarIcon = false
     @AppStorage(MenuBarStyle.barsKey) private var menuBarBars = true
     @AppStorage(MenuBarStyle.textKey) private var menuBarText = true
@@ -261,6 +264,7 @@ private struct GeneralSettings: View {
         case .antigravity: return $showAntigravity
         case .zai: return $showZai
         case .deepseek: return $showDeepSeek
+        case .opencodeGo: return $showOpenCodeGo
         }
     }
 
@@ -498,6 +502,33 @@ private struct DeepSeekSettings: View {
                     }
                 }
                 .disabled(apiKey.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+    }
+}
+
+// MARK: - OpenCode Go
+
+private struct OpenCodeGoSettings: View {
+    @ObservedObject var provider: OpenCodeGoProvider
+
+    var body: some View {
+        Section {
+            PageTitle(title: "OpenCode Go", help: "The Go subscription's 5-hour, weekly and monthly quota, read straight from the credentials OpenCode itself stores — run `opencode auth login opencode`, and nothing has to be pasted here. Go is a flat-rate subscription, so there is no balance and no warm-up.")
+        }
+        Section(compact: "Account") {
+            if let error = provider.errorMessage {
+                Text(error).foregroundStyle(Theme.high)
+            }
+            if provider.isConfigured {
+                LabeledContent("Credential", value: provider.credentialSource ?? "found")
+                Button("Re-read and refresh") { Task { await provider.refresh() } }
+            } else {
+                Text("No OpenCode credential stored yet. Run `opencode auth login opencode` in a terminal and connect it — CSwapBar reads the same credentials OpenCode stores, so nothing has to be pasted here.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Re-read") { Task { await provider.refresh() } }
             }
         }
     }

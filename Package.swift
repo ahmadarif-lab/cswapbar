@@ -28,9 +28,14 @@ let package = Package(
             dependencies: ["ProviderKit"],
             path: "Sources/DeepSeekEngine"
         ),
+        .target(
+            name: "OpenCodeGoEngine",
+            dependencies: ["ProviderKit"],
+            path: "Sources/OpenCodeGoEngine"
+        ),
         .executableTarget(
             name: "CSwapBar",
-            dependencies: ["SwapEngine", "AntigravityEngine", "ZAIEngine", "DeepSeekEngine", "ProviderKit"],
+            dependencies: ["SwapEngine", "AntigravityEngine", "ZAIEngine", "DeepSeekEngine", "OpenCodeGoEngine", "ProviderKit"],
             path: "Sources/CSwapBar"
         ),
         .testTarget(
@@ -47,6 +52,11 @@ let package = Package(
             name: "DeepSeekEngineTests",
             dependencies: ["DeepSeekEngine"],
             path: "Tests/DeepSeekEngineTests"
+        ),
+        .testTarget(
+            name: "OpenCodeGoEngineTests",
+            dependencies: ["OpenCodeGoEngine"],
+            path: "Tests/OpenCodeGoEngineTests"
         ),
         .testTarget(
             name: "AntigravityEngineTests",

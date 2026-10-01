@@ -265,6 +265,8 @@ final class StatusBarController: NSObject {
                 ProviderDropdownView(provider: store.zai) { ZAIDropdownExtras(provider: store.zai) }
             case .deepseek:
                 ProviderDropdownView(provider: store.deepseek) { DeepSeekDropdownExtras(provider: store.deepseek) }
+            case .opencodeGo:
+                ProviderDropdownView(provider: store.opencodeGo) { OpenCodeGoDropdownExtras(provider: store.opencodeGo) }
             }
         }
         .environmentObject(store.updater)
