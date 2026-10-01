@@ -7,7 +7,7 @@ import ProviderKit
 /// whatever OpenCode itself stored, so there is nothing to paste here and no
 /// add sheet; the quota is read-only, so there is no warm-up either.
 @MainActor
-final class OpenCodeGoProvider: ObservableObject {
+final class OpenCodeGoProvider: ObservableObject, WarmingUp {
     let kind: ProviderKind = .opencodeGo
 
     @Published private(set) var accounts: [ProviderAccount] = []
@@ -18,6 +18,8 @@ final class OpenCodeGoProvider: ObservableObject {
     /// database, and a view body is the wrong place for that.
     @Published private(set) var isConfigured = false
     @Published private(set) var credentialSource: String?
+    @Published private(set) var isWarmingUp = false
+    @Published private(set) var warmupStatusText: String?
 
     private let engine = OpenCodeGoEngine.shared
     private var refreshTask: Task<Void, Never>?
@@ -112,6 +114,33 @@ final class OpenCodeGoProvider: ObservableObject {
 
     private static func formatUSD(_ amount: Double) -> String {
         String(format: "$%.2f", amount)
+    }
+
+    // MARK: - Warm-up
+
+    /// The window is started by a real message, and the only thing that can
+    /// send one is the CLI the user is already signed into -- so this shells
+    /// out to `opencode run`, the way Antigravity's warm-up shells out to
+    /// `agy`. It leaves a "CSwapBar warm-up" session behind, the same way
+    /// Claude's warm-up leaves a `claude -p` entry behind.
+    func warmup() async {
+        guard !isWarmingUp, isConfigured else { return }
+        isWarmingUp = true
+        warmupStatusText = "Sending warm-up message…"
+        defer { isWarmingUp = false }
+        do {
+            let engine = engine
+            try await Task.detached { try engine.sendWarmupMessage() }.value
+            warmupStatusText = "Warm-up complete."
+        } catch {
+            warmupStatusText = "Warm-up failed: \(error.localizedDescription)"
+            DiagnosticLog.log("opencode-go", "warm-up failed: \(DiagnosticLog.describe(error))")
+        }
+        await refresh()
+        try? await Task.sleep(nanoseconds: 4_000_000_000)
+        if warmupStatusText == "Warm-up complete." {
+            warmupStatusText = nil
+        }
     }
 }
 

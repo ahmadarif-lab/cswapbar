@@ -106,8 +106,8 @@ provider off, a single CSwapBar icon stays in the menu bar for Settings and Quit
 
 Every provider with a usage window also has a **warm-up**: a short throwaway message that starts its 5-hour window
 counting. Run it from the dropdown, or set one or more times of day (24-hour) in that provider's
-Settings page to run it on a schedule while CSwapBar is open. (OpenCode Go is the exception: its
-quota is read-only.)
+Settings page to run it on a schedule while CSwapBar is open. Antigravity's goes out through the
+`agy` CLI and OpenCode Go's through the `opencode` CLI; the rest send it themselves.
 
 | Provider | Quota shown | Connecting |
 | --- | --- | --- |
@@ -115,7 +115,7 @@ quota is read-only.)
 | **Antigravity** | 5h + weekly, for both its Gemini pool and its Claude/GPT pool | needs the `agy` CLI, signed in — see [setup](#antigravity-setup) below |
 | **z.ai** (GLM Coding Plan) | 5h + weekly | paste an API key from z.ai's own Settings → API keys page |
 | **DeepSeek** | remaining API credit (paid + granted) — pay-as-you-go, so no windows or warm-up | paste an API key from platform.deepseek.com → API keys |
-| **OpenCode Go** | 5-hour + weekly + monthly subscription quota, with the spend behind each window | just run `opencode auth login opencode` once — CSwapBar reads the credentials OpenCode itself stores (`opencode.db`, or a v1-era `auth.json`), so there's nothing to set up here |
+| **OpenCode Go** | 5-hour + weekly + monthly subscription quota, with the spend behind each window | just run `opencode auth login opencode` once — CSwapBar reads the credentials OpenCode itself stores (`opencode.db`, or a v1-era `auth.json`), so there's nothing to set up here. Warm-up shells out to the `opencode` CLI, so that needs to be installed |
 
 ### Antigravity setup
 
@@ -136,7 +136,8 @@ not left running.
 - The [Antigravity CLI](https://antigravity.google/download#antigravity-cli) (`agy`), signed in —
   only for the Antigravity provider
 - An OpenCode Go subscription signed in once with `opencode auth login opencode` — only for the
-  OpenCode Go provider; CSwapBar reads the credentials OpenCode stores, and needs no CLI of its own
+  OpenCode Go provider; its quota is read from the credentials OpenCode stores, and the `opencode`
+  CLI is needed for that provider's warm-up
 - Xcode command line tools with Swift 5.10+, only if you build from source
 
 ## Build from source

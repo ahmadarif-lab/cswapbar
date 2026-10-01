@@ -13,7 +13,7 @@ final class ProviderStore: ObservableObject {
     let opencodeGo = OpenCodeGoProvider()
     let updater = Updater()
 
-    private lazy var warmupScheduler = WarmupScheduler { [unowned self] in [claude, antigravity, zai] }
+    private lazy var warmupScheduler = WarmupScheduler { [unowned self] in [claude, antigravity, zai, opencodeGo] }
     private var cancellables: Set<AnyCancellable> = []
     private var lastAppliedShownKinds: Set<ProviderKind>?
 

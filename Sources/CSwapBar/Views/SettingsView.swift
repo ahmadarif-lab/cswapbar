@@ -514,7 +514,7 @@ private struct OpenCodeGoSettings: View {
 
     var body: some View {
         Section {
-            PageTitle(title: "OpenCode Go", help: "The Go subscription's 5-hour, weekly and monthly quota, read straight from the credentials OpenCode itself stores — run `opencode auth login opencode`, and nothing has to be pasted here. Go is a flat-rate subscription, so there is no balance and no warm-up.")
+            PageTitle(title: "OpenCode Go", help: "The Go subscription's 5-hour, weekly and monthly quota, read straight from the credentials OpenCode itself stores — run `opencode auth login opencode`, and nothing has to be pasted here. Go is a flat-rate subscription, so there is no balance.")
         }
         Section(compact: "Account") {
             if let error = provider.errorMessage {
@@ -531,6 +531,10 @@ private struct OpenCodeGoSettings: View {
                 Button("Re-read") { Task { await provider.refresh() } }
             }
         }
+        WarmupScheduleSection(
+            kind: .opencodeGo,
+            explanation: "At each time, one short `opencode run` message is sent so the plan's rolling 5-hour window starts counting. Needs the opencode CLI installed."
+        )
     }
 }
 

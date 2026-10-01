@@ -7,6 +7,7 @@ public enum OpenCodeGoEngineError: LocalizedError, Equatable {
     case notConfigured
     case sessionExpired
     case noSubscription
+    case warmup(String)
     case http(Int, String)
     case network(String)
     case decoding(String)
@@ -19,6 +20,8 @@ public enum OpenCodeGoEngineError: LocalizedError, Equatable {
             return "OpenCode rejected the stored session (HTTP 401). Sign in again with `opencode auth login opencode`."
         case .noSubscription:
             return "No active OpenCode Go subscription on this workspace."
+        case .warmup(let message):
+            return message
         case .http(401, _):
             return "OpenCode rejected the API key (HTTP 401)."
         case .http(403, _):
@@ -124,6 +127,49 @@ public final class OpenCodeGoEngine: @unchecked Sendable {
         } catch {
             DiagnosticLog.log(logTag, "reading stored credentials failed: \(DiagnosticLog.describe(error))")
             return nil
+        }
+    }
+
+    // MARK: - Warm-up
+
+    /// Sends one throwaway `opencode run` message so the plan's rolling
+    /// 5-hour window starts counting now, rather than whenever the first real
+    /// request happens to land. Blocking -- call off the main actor.
+    public func sendWarmupMessage() throws {
+        guard hasStoredCredential() else { throw OpenCodeGoEngineError.notConfigured }
+        guard let binary = OpenCodeGoCLI.findBinary() else {
+            throw OpenCodeGoEngineError.warmup("The opencode CLI wasn't found -- install it to warm up OpenCode Go.")
+        }
+        let env = OpenCodeGoCLI.environment()
+        let home = FileManager.default.homeDirectoryForCurrentUser
+
+        do {
+            let listing = try Subprocess.run(binary, ["models"], environment: env, currentDirectory: home, timeout: 30)
+            guard let model = OpenCodeGoCLI.warmupModel(fromListing: listing.stdout) else {
+                throw OpenCodeGoEngineError.warmup("`opencode models` listed no OpenCode Go models to warm up.")
+            }
+            let result = try Subprocess.run(
+                binary,
+                [
+                    "run",
+                    "--title", "CSwapBar warm-up",
+                    "--model", "\(OpenCodeGoCLI.providerPrefix)\(model)",
+                    "Reply with the single word: ok.",
+                ],
+                environment: env, currentDirectory: home, timeout: 180
+            )
+            guard result.status == 0 else {
+                let detail = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines).prefix(300)
+                throw OpenCodeGoEngineError.warmup("`opencode run` exited \(result.status): \(detail)")
+            }
+            DiagnosticLog.log(logTag, "warm-up message sent (model \(model))")
+        } catch let error as OpenCodeGoEngineError {
+            DiagnosticLog.log(logTag, "warm-up failed: \(DiagnosticLog.describe(error))")
+            throw error
+        } catch {
+            let message = "Warm-up could not run the opencode CLI: \(DiagnosticLog.describe(error))"
+            DiagnosticLog.log(logTag, "warm-up failed: \(message)")
+            throw OpenCodeGoEngineError.warmup(message)
         }
     }
 

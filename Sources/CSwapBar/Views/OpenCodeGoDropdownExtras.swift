@@ -5,6 +5,9 @@ struct OpenCodeGoDropdownExtras: View {
     @ObservedObject var provider: OpenCodeGoProvider
 
     var body: some View {
+        if provider.isConfigured {
+            WarmupDropdownSection(provider: provider)
+        }
         SectionDivider()
         SectionHeader(title: "Manage")
         if provider.isConfigured {
