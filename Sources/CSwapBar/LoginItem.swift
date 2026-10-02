@@ -14,10 +14,19 @@ enum LoginItem {
         SMAppService.mainApp.status == .enabled
     }
 
+    /// A login item has to be a real `.app`. Run from `Scripts/run_dev.sh`
+    /// (`swift run`) the process is the bare binary in `.build/.../Debug`, and
+    /// macOS opens a login item like that in Terminal -- a stray
+    /// `.../Debug/CSwapBar ; exit;` window at every login. Dev runs skip it.
+    private static var isBundledApp: Bool {
+        Bundle.main.bundleURL.pathExtension == "app"
+    }
+
     @discardableResult
     static func setEnabled(_ enabled: Bool) -> Error? {
         do {
             if enabled {
+                guard isBundledApp else { return nil }
                 try SMAppService.mainApp.register()
             } else {
                 try SMAppService.mainApp.unregister()
