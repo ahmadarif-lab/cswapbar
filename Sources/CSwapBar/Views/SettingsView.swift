@@ -5,7 +5,7 @@ import ZAIEngine
 
 enum SettingsPage: String, CaseIterable, Identifiable {
     case general
-    case claude, antigravity, zai, deepseek, opencodeGo
+    case claude, antigravity, zai, deepseek, opencodeGo, kiro
 
     var id: String { rawValue }
     var kind: ProviderKind? {
@@ -16,6 +16,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .zai: return .zai
         case .deepseek: return .deepseek
         case .opencodeGo: return .opencodeGo
+        case .kiro: return .kiro
         }
     }
 
@@ -112,6 +113,7 @@ private struct SettingsOptions: View {
             case .zai: ZAISettings(provider: store.zai)
             case .deepseek: DeepSeekSettings(provider: store.deepseek)
             case .opencodeGo: OpenCodeGoSettings(provider: store.opencodeGo)
+            case .kiro: KiroSettings(provider: store.kiro)
             }
         }
         .formStyle(.grouped)
@@ -195,6 +197,7 @@ private struct GeneralSettings: View {
     @AppStorage(ProviderKind.zai.showDefaultsKey) private var showZai = ProviderKind.zai.defaultEnabled
     @AppStorage(ProviderKind.deepseek.showDefaultsKey) private var showDeepSeek = ProviderKind.deepseek.defaultEnabled
     @AppStorage(ProviderKind.opencodeGo.showDefaultsKey) private var showOpenCodeGo = ProviderKind.opencodeGo.defaultEnabled
+    @AppStorage(ProviderKind.kiro.showDefaultsKey) private var showKiro = ProviderKind.kiro.defaultEnabled
     @AppStorage(MenuBarStyle.iconKey) private var menuBarIcon = false
     @AppStorage(MenuBarStyle.barsKey) private var menuBarBars = true
     @AppStorage(MenuBarStyle.textKey) private var menuBarText = true
@@ -265,6 +268,7 @@ private struct GeneralSettings: View {
         case .zai: return $showZai
         case .deepseek: return $showDeepSeek
         case .opencodeGo: return $showOpenCodeGo
+        case .kiro: return $showKiro
         }
     }
 
@@ -535,6 +539,45 @@ private struct OpenCodeGoSettings: View {
             kind: .opencodeGo,
             explanation: "At each time, one short `opencode run` message is sent so the plan's rolling 5-hour window starts counting. Needs the opencode CLI installed."
         )
+    }
+}
+
+// MARK: - Kiro
+
+private struct KiroSettings: View {
+    @ObservedObject var provider: KiroProvider
+    @AppStorage(KiroMenuBarDisplay.defaultsKey) private var display = KiroMenuBarDisplay.percentage.rawValue
+
+    var body: some View {
+        Section {
+            PageTitle(title: "Kiro", help: "The monthly credit pool on the Kiro plan you're signed into. CSwapBar runs `kiro-cli chat --no-interactive \"/usage\"` — the same command you'd type — and reads the report it prints, so there's nothing to set up here beyond `kiro-cli login`. Kiro's credits refill monthly rather than on a rolling 5-hour window, so there is no warm-up.")
+        }
+        Section(compact: "Menu Bar", help: "How Kiro's credits show in the menu bar: a usage bar or the percentage used. Applies to Kiro only; the provider icon still follows the global Menu Bar Shows setting.") {
+            Picker("Show", selection: $display) {
+                ForEach(KiroMenuBarDisplay.allCases, id: \.rawValue) { Text($0.title).tag($0.rawValue) }
+            }
+            .pickerStyle(.segmented)
+        }
+        Section(compact: "Account") {
+            if let error = provider.errorMessage {
+                Text(error).foregroundStyle(Theme.high)
+            }
+            if provider.isConfigured {
+                LabeledContent("CLI") {
+                    Text(provider.binaryPath ?? "found")
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help(provider.binaryPath ?? "")
+                }
+                Button("Read usage again") { Task { await provider.refresh() } }
+            } else {
+                Text("No kiro-cli found. Install Kiro CLI and run `kiro-cli login` — CSwapBar reads that CLI's own session, so nothing has to be pasted here.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Look again") { Task { await provider.refresh() } }
+            }
+        }
     }
 }
 

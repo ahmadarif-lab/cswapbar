@@ -7,6 +7,7 @@ enum ProviderKind: String, CaseIterable, Identifiable {
     case zai
     case deepseek
     case opencodeGo
+    case kiro
 
     var id: String { rawValue }
 
@@ -17,6 +18,7 @@ enum ProviderKind: String, CaseIterable, Identifiable {
         case .zai: return "z.ai"
         case .deepseek: return "DeepSeek"
         case .opencodeGo: return "OpenCode Go"
+        case .kiro: return "Kiro"
         }
     }
 
@@ -28,6 +30,7 @@ enum ProviderKind: String, CaseIterable, Identifiable {
         case .zai: return .glyph(.zai)
         case .deepseek: return .glyph(.deepseek)
         case .opencodeGo: return .glyph(.opencodeGo)
+        case .kiro: return .glyph(.kiro)
         }
     }
 
@@ -36,11 +39,14 @@ enum ProviderKind: String, CaseIterable, Identifiable {
     /// How often this provider's own poll loop re-fetches. z.ai and Claude
     /// are cheap and move fast; OpenCode Go's quota endpoint is an
     /// undocumented, uncached server-side aggregate, so it's polled least.
+    /// Kiro has no endpoint at all -- each read launches the CLI -- and its
+    /// credits only move on a monthly cycle, so it's polled least of all.
     var refreshInterval: TimeInterval {
         switch self {
         case .claude, .zai: return 30
         case .antigravity, .deepseek: return 60
         case .opencodeGo: return 120
+        case .kiro: return 300
         }
     }
 
@@ -64,6 +70,10 @@ enum ProviderKind: String, CaseIterable, Identifiable {
         // leans on (#8E8B8B), deliberately darker than z.ai's so the two
         // neutral marks stay apart in the Settings sidebar.
         case .opencodeGo: return Color(white: 0x8E / 255)
+        // Kiro's own logo lilac (#C695FF), the color its ">_" prompt mark is
+        // drawn in. Light enough that the Settings sidebar's selected pill
+        // flips to a dark foreground for it (see `isLight`).
+        case .kiro: return Color(red: 0xC6 / 255, green: 0x95 / 255, blue: 0xFF / 255)
         }
     }
 }

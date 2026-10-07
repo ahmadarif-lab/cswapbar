@@ -16,6 +16,7 @@ enum ProviderSettings {
             MenuBarStyle.textKey: true,
             MenuBarStyle.balanceKey: true,
             MenuBarStyle.groupedKey: true,
+            KiroMenuBarDisplay.defaultsKey: KiroMenuBarDisplay.percentage.rawValue,
         ]
         for kind in ProviderKind.allCases {
             defaults[kind.showDefaultsKey] = kind.defaultEnabled
@@ -97,5 +98,27 @@ struct MenuBarStyle {
             showsBalance: defaults.bool(forKey: balanceKey),
             groupsItems: defaults.bool(forKey: groupedKey)
         )
+    }
+}
+
+/// How Kiro's menu bar item shows its monthly credit pool: a usage bar or
+/// the percentage, one or the other. Kiro has a single window, so the two
+/// say the same thing and showing both is redundant. This overrides the
+/// global bars / percentage switches for Kiro only; the provider icon
+/// switch still applies.
+enum KiroMenuBarDisplay: String, CaseIterable {
+    case bar, percentage
+
+    static let defaultsKey = "cswapbar.menubar.kiro.display"
+
+    var title: String {
+        switch self {
+        case .bar: return "Bar"
+        case .percentage: return "Percentage"
+        }
+    }
+
+    static var current: KiroMenuBarDisplay {
+        UserDefaults.standard.string(forKey: defaultsKey).flatMap(KiroMenuBarDisplay.init(rawValue:)) ?? .percentage
     }
 }

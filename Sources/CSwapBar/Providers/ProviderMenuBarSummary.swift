@@ -18,6 +18,15 @@ extension Array where Element == ProviderAccount {
         func worst(_ window: PoolWindow) -> Double? {
             relevant.flatMap(\.pools).filter { $0.window == window }.compactMap(\.pctUsed).max()
         }
-        return (worst(.fiveHour), worst(.weekly))
+        let top = worst(.fiveHour)
+        let bottom = worst(.weekly)
+        // A provider whose only window is a non-standard one -- Kiro's
+        // monthly credit pool, which has no 5-hour or weekly counterpart to
+        // condense -- would otherwise draw no bar at all, leaving just its
+        // percentage. Falls back to those windows for the top bar; every
+        // other provider always has a standard window, so its icon is
+        // unchanged.
+        guard top == nil, bottom == nil else { return (top, bottom) }
+        return (worst(.other), nil)
     }
 }

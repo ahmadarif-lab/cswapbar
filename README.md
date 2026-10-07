@@ -6,7 +6,7 @@
 
 <p align="center">
   A native macOS menu bar app that tracks quota across several AI coding tools at once — Claude Code,
-  Antigravity, z.ai, DeepSeek, and OpenCode Go — each as its own menu bar icon you can show or hide from Settings.<br>
+  Antigravity, z.ai, DeepSeek, OpenCode Go, and Kiro — each as its own menu bar icon you can show or hide from Settings.<br>
   For Claude, it also juggles several accounts: see every account's 5-hour and weekly usage at a
   glance, and switch between them with one click.<br>
   Claude's account engine is a Swift port of <a href="https://github.com/realiti4/claude-swap">claude-swap</a>
@@ -70,7 +70,7 @@ appears after a blocked launch.
 ## Screenshot
 
 <p align="center">
-  <img src="Resources/screenshots/hero.webp" alt="CSwapBar Settings window showing the Claude popover with multiple accounts and usage bars alongside menu bar toggles for Claude, Antigravity, z.ai, DeepSeek, and OpenCode Go and the Menu Bar Shows options" width="720">
+  <img src="Resources/screenshots/hero.webp" alt="CSwapBar Settings window showing the Claude popover with multiple accounts and usage bars alongside menu bar toggles for Claude, Antigravity, z.ai, DeepSeek, OpenCode Go, and Kiro and the Menu Bar Shows options" width="720">
 </p>
 
 ## What it does
@@ -102,12 +102,15 @@ Each action does exactly what the matching `cswap` command does, on the same fil
 
 Each provider you turn on in **Settings** gets its own menu bar icon and dropdown, showing 5-hour
 and weekly (or equivalent) usage bars. Drag to reorder them, or turn any of them off — with every
-provider off, a single CSwapBar icon stays in the menu bar for Settings and Quit.
+provider off, a single CSwapBar icon stays in the menu bar for Settings and Quit. Kiro has a single
+monthly pool, so its Settings page lets you pick **Bar** or **Percentage** for its menu bar item
+(percentage by default) instead of showing the same number twice.
 
-Every provider with a usage window also has a **warm-up**: a short throwaway message that starts its 5-hour window
+Every provider with a rolling usage window also has a **warm-up**: a short throwaway message that starts its 5-hour window
 counting. Run it from the dropdown, or set one or more times of day (24-hour) in that provider's
 Settings page to run it on a schedule while CSwapBar is open. Antigravity's goes out through the
-`agy` CLI and OpenCode Go's through the `opencode` CLI; the rest send it themselves.
+`agy` CLI and OpenCode Go's through the `opencode` CLI; the rest send it themselves. Kiro has none:
+its credits refill on a monthly date rather than a rolling window, so there is nothing to start.
 
 | Provider | Quota shown | Connecting |
 | --- | --- | --- |
@@ -116,6 +119,7 @@ Settings page to run it on a schedule while CSwapBar is open. Antigravity's goes
 | **z.ai** (GLM Coding Plan) | 5h + weekly | paste an API key from z.ai's own Settings → API keys page |
 | **DeepSeek** | remaining API credit (paid + granted) — pay-as-you-go, so no windows or warm-up | paste an API key from platform.deepseek.com → API keys |
 | **OpenCode Go** | 5-hour + weekly + monthly subscription quota, with the spend behind each window | just run `opencode auth login opencode` once — CSwapBar reads the credentials OpenCode itself stores (`opencode.db`, or a v1-era `auth.json`), so there's nothing to set up here. Warm-up shells out to the `opencode` CLI, so that needs to be installed |
+| **Kiro** | the monthly credit pool on the Kiro plan you're signed into — no rolling window, so no warm-up | install the Kiro CLI (`brew install --cask kiro-cli` works) and run `kiro-cli login` once — CSwapBar runs `kiro-cli chat --no-interactive "/usage"` and reads the report it prints, so there's nothing to paste here |
 
 ### Antigravity setup
 
@@ -138,6 +142,9 @@ not left running.
 - An OpenCode Go subscription signed in once with `opencode auth login opencode` — only for the
   OpenCode Go provider; its quota is read from the credentials OpenCode stores, and the `opencode`
   CLI is needed for that provider's warm-up
+- The [Kiro CLI](https://kiro.dev) signed in with `kiro-cli login` — only for the Kiro provider; its
+  monthly credit usage is read by running `kiro-cli chat --no-interactive "/usage"`. A Homebrew
+  install (`brew install --cask kiro-cli`) is found automatically
 - Xcode command line tools with Swift 5.10+, only if you build from source
 
 ## Build from source

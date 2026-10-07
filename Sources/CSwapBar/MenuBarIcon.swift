@@ -1,8 +1,9 @@
 import AppKit
 
 /// Draws the whole menu bar strip: one segment per shown provider, each with
-/// its logo, its mini usage bars (5h on top, 7d below) and its percentage or
-/// balance -- whichever `MenuBarStyle` asks for.
+/// its logo, its mini usage bars (5h on top, 7d below -- a single bar when
+/// the provider only has one window) and its percentage or balance --
+/// whichever `MenuBarStyle` asks for.
 ///
 /// Everything, text included, goes into a single NSImage so every provider
 /// lives in one status item and macOS can't slot other apps' items between
@@ -50,9 +51,16 @@ enum MenuBarIcon {
                     x += iconSide + spacing
                 }
                 if let bars = segment.bars {
-                    let top = (height - barsHeight) / 2
+                    // Only as many bars as there are windows: a provider
+                    // whose second window doesn't exist (Kiro's single
+                    // monthly credit pool, or any provider missing its
+                    // weekly figure) draws one bar, not one bar over an
+                    // empty track that would read as "0% used".
+                    let hasBottom = bars.bottom != nil
+                    let stackHeight = hasBottom ? barsHeight : barHeight
+                    let top = (height - stackHeight) / 2
                     draw(pct: bars.top, x: x, y: top)
-                    draw(pct: bars.bottom, x: x, y: top + barHeight + barGap)
+                    if hasBottom { draw(pct: bars.bottom, x: x, y: top + barHeight + barGap) }
                     x += barsWidth + spacing
                 }
                 if let text = segment.text {

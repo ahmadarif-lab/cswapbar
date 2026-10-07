@@ -101,12 +101,17 @@ final class StatusBarController: NSObject {
         // it shows its remaining credit under its own switch instead.
         let balance = provider.accounts.lazy.compactMap(\.balance).first
         let hasBars = balance == nil || top != nil || bottom != nil
+        // Kiro picks bar or percentage for itself, overriding the global
+        // switches (its one window would otherwise show the same number twice).
+        let kiroDisplay = kind == .kiro ? KiroMenuBarDisplay.current : nil
+        let wantsBars = kiroDisplay.map { $0 == .bar } ?? style.showsBars
+        let wantsText = kiroDisplay.map { $0 == .percentage } ?? style.showsText
         let text = if let balance {
             style.showsBalance ? balance.total : nil
         } else {
-            style.showsText ? top.map { "\(Int($0))%" } : nil
+            wantsText ? top.map { "\(Int($0))%" } : nil
         }
-        let showBars = style.showsBars && hasBars
+        let showBars = wantsBars && hasBars
         // Whatever the style, never leave a segment blank: fall back to the logo.
         let showIcon = style.showsIcon || (text == nil && !showBars)
         return MenuBarIcon.Segment(
@@ -267,6 +272,8 @@ final class StatusBarController: NSObject {
                 ProviderDropdownView(provider: store.deepseek) { DeepSeekDropdownExtras(provider: store.deepseek) }
             case .opencodeGo:
                 ProviderDropdownView(provider: store.opencodeGo) { OpenCodeGoDropdownExtras(provider: store.opencodeGo) }
+            case .kiro:
+                ProviderDropdownView(provider: store.kiro) { KiroDropdownExtras(provider: store.kiro) }
             }
         }
         .environmentObject(store.updater)

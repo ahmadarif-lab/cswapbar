@@ -33,9 +33,14 @@ let package = Package(
             dependencies: ["ProviderKit"],
             path: "Sources/OpenCodeGoEngine"
         ),
+        .target(
+            name: "KiroEngine",
+            dependencies: ["ProviderKit"],
+            path: "Sources/KiroEngine"
+        ),
         .executableTarget(
             name: "CSwapBar",
-            dependencies: ["SwapEngine", "AntigravityEngine", "ZAIEngine", "DeepSeekEngine", "OpenCodeGoEngine", "ProviderKit"],
+            dependencies: ["SwapEngine", "AntigravityEngine", "ZAIEngine", "DeepSeekEngine", "OpenCodeGoEngine", "KiroEngine", "ProviderKit"],
             path: "Sources/CSwapBar"
         ),
         .testTarget(
@@ -57,6 +62,11 @@ let package = Package(
             name: "OpenCodeGoEngineTests",
             dependencies: ["OpenCodeGoEngine"],
             path: "Tests/OpenCodeGoEngineTests"
+        ),
+        .testTarget(
+            name: "KiroEngineTests",
+            dependencies: ["KiroEngine"],
+            path: "Tests/KiroEngineTests"
         ),
         .testTarget(
             name: "AntigravityEngineTests",
