@@ -6,7 +6,7 @@
 
 <p align="center">
   A native macOS menu bar app that tracks quota across several AI coding tools at once — Claude Code,
-  Antigravity, z.ai, DeepSeek, OpenCode Go, and Kiro — each as its own menu bar icon you can show or hide from Settings.<br>
+  Antigravity, z.ai, DeepSeek, OpenCode Go, Kiro, and Codex — each as its own menu bar icon you can show or hide from Settings.<br>
   For Claude, it also juggles several accounts: see every account's 5-hour and weekly usage at a
   glance, and switch between them with one click.<br>
   Claude's account engine is a Swift port of <a href="https://github.com/realiti4/claude-swap">claude-swap</a>
@@ -70,7 +70,7 @@ appears after a blocked launch.
 ## Screenshot
 
 <p align="center">
-  <img src="Resources/screenshots/hero.webp" alt="CSwapBar Settings window showing the Claude popover with multiple accounts and usage bars alongside menu bar toggles for Claude, Antigravity, z.ai, DeepSeek, OpenCode Go, and Kiro and the Menu Bar Shows options" width="720">
+  <img src="Resources/screenshots/hero.webp" alt="CSwapBar Settings window showing the Claude popover with multiple accounts and usage bars alongside menu bar toggles for Claude, Antigravity, z.ai, DeepSeek, OpenCode Go, Kiro, and Codex and the Menu Bar Shows options" width="720">
 </p>
 
 ## What it does
@@ -109,7 +109,7 @@ monthly pool, so its Settings page lets you pick **Bar** or **Percentage** for i
 Every provider with a rolling usage window also has a **warm-up**: a short throwaway message that starts its 5-hour window
 counting. Run it from the dropdown, or set one or more times of day (24-hour) in that provider's
 Settings page to run it on a schedule while CSwapBar is open. Antigravity's goes out through the
-`agy` CLI and OpenCode Go's through the `opencode` CLI; the rest send it themselves. Kiro has none:
+`agy` CLI, OpenCode Go's through the `opencode` CLI and Codex's through `codex exec`; the rest send it themselves. Kiro has none:
 its credits refill on a monthly date rather than a rolling window, so there is nothing to start.
 
 | Provider | Quota shown | Connecting |
@@ -119,6 +119,7 @@ its credits refill on a monthly date rather than a rolling window, so there is n
 | **z.ai** (GLM Coding Plan) | 5h + weekly | paste an API key from z.ai's own Settings → API keys page |
 | **DeepSeek** | remaining API credit (paid + granted) — pay-as-you-go, so no windows or warm-up | paste an API key from platform.deepseek.com → API keys |
 | **OpenCode Go** | 5-hour + weekly + monthly subscription quota, with the spend behind each window | just run `opencode auth login opencode` once — CSwapBar reads the credentials OpenCode itself stores (`opencode.db`, or a v1-era `auth.json`), so there's nothing to set up here. Warm-up shells out to the `opencode` CLI, so that needs to be installed |
+| **Codex** (ChatGPT plan) | 5-hour + weekly Codex usage, plus credits if the plan has them | just run `codex login` once and sign in with ChatGPT — CSwapBar reads the login the Codex CLI itself stores (`~/.codex/auth.json`, or `$CODEX_HOME`), so there's nothing to paste here. It only reads that login and never renews it: if the session has expired, run `codex` once. An API-key login has no usage windows to show. Warm-up shells out to the `codex` CLI, so that needs to be installed |
 | **Kiro** | the monthly credit pool on the Kiro plan you're signed into — no rolling window, so no warm-up | install the Kiro CLI (`brew install --cask kiro-cli` works) and run `kiro-cli login` once — CSwapBar runs `kiro-cli chat --no-interactive "/usage"` and reads the report it prints, so there's nothing to paste here |
 
 ### Antigravity setup
@@ -145,6 +146,8 @@ not left running.
 - The [Kiro CLI](https://kiro.dev) signed in with `kiro-cli login` — only for the Kiro provider; its
   monthly credit usage is read by running `kiro-cli chat --no-interactive "/usage"`. A Homebrew
   install (`brew install --cask kiro-cli`) is found automatically
+- Codex signed in with ChatGPT (`codex login`) — only for the Codex provider; its usage is read with the
+  login the Codex CLI stores, and the `codex` CLI is needed for that provider's warm-up
 - Xcode command line tools with Swift 5.10+, only if you build from source
 
 ## Build from source

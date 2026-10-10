@@ -5,7 +5,7 @@ import ZAIEngine
 
 enum SettingsPage: String, CaseIterable, Identifiable {
     case general
-    case claude, antigravity, zai, deepseek, opencodeGo, kiro
+    case claude, antigravity, zai, deepseek, opencodeGo, kiro, codex
 
     var id: String { rawValue }
     var kind: ProviderKind? {
@@ -17,7 +17,26 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .deepseek: return .deepseek
         case .opencodeGo: return .opencodeGo
         case .kiro: return .kiro
+        case .codex: return .codex
         }
+    }
+
+    init(kind: ProviderKind) {
+        switch kind {
+        case .claude: self = .claude
+        case .antigravity: self = .antigravity
+        case .zai: self = .zai
+        case .deepseek: self = .deepseek
+        case .opencodeGo: self = .opencodeGo
+        case .kiro: self = .kiro
+        case .codex: self = .codex
+        }
+    }
+
+    /// General first, then the providers in the order set in General's Menu
+    /// Bar list -- the sidebar follows it, like the menu bar itself does.
+    static func sidebarOrder(_ kinds: [ProviderKind]) -> [SettingsPage] {
+        [.general] + kinds.map(SettingsPage.init(kind:))
     }
 
     var title: String { kind?.title ?? "General" }
@@ -27,6 +46,8 @@ enum SettingsPage: String, CaseIterable, Identifiable {
 struct SettingsView: View {
     @EnvironmentObject var store: ProviderStore
     @State private var page = SettingsPage.general
+    /// Read only so the sidebar redraws when the order changes in General.
+    @AppStorage(ProviderSettings.orderKey) private var orderRaw = ""
 
     var body: some View {
         HStack(spacing: 0) {
@@ -43,7 +64,7 @@ struct SettingsView: View {
 
     private var sidebar: some View {
         VStack(spacing: 6) {
-            ForEach(SettingsPage.allCases) { item in
+            ForEach(SettingsPage.sidebarOrder(ProviderSettings.completeOrder(ProviderSettings.decodeOrder(orderRaw)))) { item in
                 Button {
                     page = item
                 } label: {
@@ -114,6 +135,7 @@ private struct SettingsOptions: View {
             case .deepseek: DeepSeekSettings(provider: store.deepseek)
             case .opencodeGo: OpenCodeGoSettings(provider: store.opencodeGo)
             case .kiro: KiroSettings(provider: store.kiro)
+            case .codex: CodexSettings(provider: store.codex)
             }
         }
         .formStyle(.grouped)
@@ -152,6 +174,22 @@ struct PageTitle: View {
             Text(title).font(.title2.bold()).foregroundStyle(.primary)
             if let help { InfoButton(text: help, size: 13) }
         }
+    }
+}
+
+/// The "show this provider in the menu bar" switch on its own Settings page,
+/// so a provider can be turned on or off where you're already configuring it
+/// rather than only from General. It writes the same UserDefaults key as the
+/// General list, so the two always agree.
+struct ShowInMenuBarToggle: View {
+    @AppStorage private var shown: Bool
+
+    init(kind: ProviderKind) {
+        _shown = AppStorage(wrappedValue: kind.defaultEnabled, kind.showDefaultsKey)
+    }
+
+    var body: some View {
+        Toggle("Show in menu bar", isOn: $shown)
     }
 }
 
@@ -198,6 +236,7 @@ private struct GeneralSettings: View {
     @AppStorage(ProviderKind.deepseek.showDefaultsKey) private var showDeepSeek = ProviderKind.deepseek.defaultEnabled
     @AppStorage(ProviderKind.opencodeGo.showDefaultsKey) private var showOpenCodeGo = ProviderKind.opencodeGo.defaultEnabled
     @AppStorage(ProviderKind.kiro.showDefaultsKey) private var showKiro = ProviderKind.kiro.defaultEnabled
+    @AppStorage(ProviderKind.codex.showDefaultsKey) private var showCodex = ProviderKind.codex.defaultEnabled
     @AppStorage(MenuBarStyle.iconKey) private var menuBarIcon = false
     @AppStorage(MenuBarStyle.barsKey) private var menuBarBars = true
     @AppStorage(MenuBarStyle.textKey) private var menuBarText = true
@@ -269,6 +308,7 @@ private struct GeneralSettings: View {
         case .deepseek: return $showDeepSeek
         case .opencodeGo: return $showOpenCodeGo
         case .kiro: return $showKiro
+        case .codex: return $showCodex
         }
     }
 
@@ -400,6 +440,7 @@ private struct ClaudeSettings: View {
     var body: some View {
         Section {
             PageTitle(title: "Claude", help: "Claude Code accounts managed by CSwapBar -- switch between them from the menu bar dropdown.")
+            ShowInMenuBarToggle(kind: .claude)
         }
         Section {
             if provider.accounts.isEmpty {
@@ -438,6 +479,7 @@ private struct ZAISettings: View {
     var body: some View {
         Section {
             PageTitle(title: "z.ai", help: "GLM Coding Plan quota, using an API key from z.ai's own Settings → API keys page.")
+            ShowInMenuBarToggle(kind: .zai)
         }
         Section(compact: "Account") {
             if provider.isConfigured {
@@ -482,6 +524,7 @@ private struct DeepSeekSettings: View {
     var body: some View {
         Section {
             PageTitle(title: "DeepSeek", help: "Remaining API credit, using an API key from platform.deepseek.com → API keys. DeepSeek is pay-as-you-go, so there are no usage windows or warm-up.")
+            ShowInMenuBarToggle(kind: .deepseek)
         }
         Section(compact: "Account") {
             if let error = provider.errorMessage {
@@ -519,6 +562,7 @@ private struct OpenCodeGoSettings: View {
     var body: some View {
         Section {
             PageTitle(title: "OpenCode Go", help: "The Go subscription's 5-hour, weekly and monthly quota, read straight from the credentials OpenCode itself stores — run `opencode auth login opencode`, and nothing has to be pasted here. Go is a flat-rate subscription, so there is no balance.")
+            ShowInMenuBarToggle(kind: .opencodeGo)
         }
         Section(compact: "Account") {
             if let error = provider.errorMessage {
@@ -551,6 +595,7 @@ private struct KiroSettings: View {
     var body: some View {
         Section {
             PageTitle(title: "Kiro", help: "The monthly credit pool on the Kiro plan you're signed into. CSwapBar runs `kiro-cli chat --no-interactive \"/usage\"` — the same command you'd type — and reads the report it prints, so there's nothing to set up here beyond `kiro-cli login`. Kiro's credits refill monthly rather than on a rolling 5-hour window, so there is no warm-up.")
+            ShowInMenuBarToggle(kind: .kiro)
         }
         Section(compact: "Menu Bar", help: "How Kiro's credits show in the menu bar: a usage bar or the percentage used. Applies to Kiro only; the provider icon still follows the global Menu Bar Shows setting.") {
             Picker("Show", selection: $display) {
@@ -581,6 +626,38 @@ private struct KiroSettings: View {
     }
 }
 
+// MARK: - Codex
+
+private struct CodexSettings: View {
+    @ObservedObject var provider: CodexProvider
+
+    var body: some View {
+        Section {
+            PageTitle(title: "Codex", help: "The 5-hour and weekly Codex usage of the ChatGPT plan you're signed into, read with the login the Codex CLI itself stores — run `codex login` and sign in with ChatGPT, and nothing has to be pasted here. CSwapBar only reads that login and never renews it, so if the session expires, running `codex` once renews it.")
+            ShowInMenuBarToggle(kind: .codex)
+        }
+        Section(compact: "Account") {
+            if let error = provider.errorMessage {
+                Text(error).foregroundStyle(Theme.high)
+            }
+            if provider.isConfigured {
+                LabeledContent("Login", value: provider.loginSummary ?? "found")
+                Button("Re-read and refresh") { Task { await provider.refresh() } }
+            } else {
+                Text("No ChatGPT login found for Codex. Run `codex login` in a terminal and sign in with ChatGPT — CSwapBar reads the same login Codex stores, so nothing has to be pasted here. An API-key login has no usage windows to show.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Re-read") { Task { await provider.refresh() } }
+            }
+        }
+        WarmupScheduleSection(
+            kind: .codex,
+            explanation: "At each time, one short `codex exec` message is sent so the plan's rolling 5-hour window starts counting. Needs the codex CLI installed."
+        )
+    }
+}
+
 // MARK: - Antigravity
 
 private struct AntigravitySettings: View {
@@ -591,6 +668,7 @@ private struct AntigravitySettings: View {
     var body: some View {
         Section {
             PageTitle(title: "Antigravity", help: "Gemini + Claude/GPT quota, read through the agy CLI's own login -- install agy and sign in once, nothing to set up here.")
+            ShowInMenuBarToggle(kind: .antigravity)
         }
         Section {
             LabeledContent("Right now", value: provider.isConfigured ? "Quota is reachable" : "No CLI or fallback connected")

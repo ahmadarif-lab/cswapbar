@@ -38,9 +38,14 @@ let package = Package(
             dependencies: ["ProviderKit"],
             path: "Sources/KiroEngine"
         ),
+        .target(
+            name: "CodexEngine",
+            dependencies: ["ProviderKit"],
+            path: "Sources/CodexEngine"
+        ),
         .executableTarget(
             name: "CSwapBar",
-            dependencies: ["SwapEngine", "AntigravityEngine", "ZAIEngine", "DeepSeekEngine", "OpenCodeGoEngine", "KiroEngine", "ProviderKit"],
+            dependencies: ["SwapEngine", "AntigravityEngine", "ZAIEngine", "DeepSeekEngine", "OpenCodeGoEngine", "KiroEngine", "CodexEngine", "ProviderKit"],
             path: "Sources/CSwapBar"
         ),
         .testTarget(
@@ -67,6 +72,11 @@ let package = Package(
             name: "KiroEngineTests",
             dependencies: ["KiroEngine"],
             path: "Tests/KiroEngineTests"
+        ),
+        .testTarget(
+            name: "CodexEngineTests",
+            dependencies: ["CodexEngine"],
+            path: "Tests/CodexEngineTests"
         ),
         .testTarget(
             name: "AntigravityEngineTests",

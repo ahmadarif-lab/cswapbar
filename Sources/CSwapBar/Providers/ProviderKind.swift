@@ -8,6 +8,7 @@ enum ProviderKind: String, CaseIterable, Identifiable {
     case deepseek
     case opencodeGo
     case kiro
+    case codex
 
     var id: String { rawValue }
 
@@ -19,6 +20,7 @@ enum ProviderKind: String, CaseIterable, Identifiable {
         case .deepseek: return "DeepSeek"
         case .opencodeGo: return "OpenCode Go"
         case .kiro: return "Kiro"
+        case .codex: return "Codex"
         }
     }
 
@@ -31,6 +33,7 @@ enum ProviderKind: String, CaseIterable, Identifiable {
         case .deepseek: return .glyph(.deepseek)
         case .opencodeGo: return .glyph(.opencodeGo)
         case .kiro: return .glyph(.kiro)
+        case .codex: return .glyph(.codex)
         }
     }
 
@@ -44,7 +47,7 @@ enum ProviderKind: String, CaseIterable, Identifiable {
     var refreshInterval: TimeInterval {
         switch self {
         case .claude, .zai: return 30
-        case .antigravity, .deepseek: return 60
+        case .antigravity, .deepseek, .codex: return 60
         case .opencodeGo: return 120
         case .kiro: return 300
         }
@@ -74,6 +77,11 @@ enum ProviderKind: String, CaseIterable, Identifiable {
         // drawn in. Light enough that the Settings sidebar's selected pill
         // flips to a dark foreground for it (see `isLight`).
         case .kiro: return Color(red: 0xC6 / 255, green: 0x95 / 255, blue: 0xFF / 255)
+        // The blue-violet of Codex's own app icon, whose gradient runs
+        // #B1A7FF -> #7A9DFF -> #3941FF; this sits between the violet end and
+        // the deep blue one, bright enough to read on CSwapBar's dark chrome
+        // yet dark enough that the Settings pill keeps a white foreground.
+        case .codex: return Color(red: 0x6A / 255, green: 0x5C / 255, blue: 0xFF / 255)
         }
     }
 }

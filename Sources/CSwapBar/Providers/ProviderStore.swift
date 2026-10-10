@@ -12,9 +12,10 @@ final class ProviderStore: ObservableObject {
     let deepseek = DeepSeekProvider()
     let opencodeGo = OpenCodeGoProvider()
     let kiro = KiroProvider()
+    let codex = CodexProvider()
     let updater = Updater()
 
-    private lazy var warmupScheduler = WarmupScheduler { [unowned self] in [claude, antigravity, zai, opencodeGo] }
+    private lazy var warmupScheduler = WarmupScheduler { [unowned self] in [claude, antigravity, zai, opencodeGo, codex] }
     private var cancellables: Set<AnyCancellable> = []
     private var lastAppliedShownKinds: Set<ProviderKind>?
 
@@ -25,7 +26,8 @@ final class ProviderStore: ObservableObject {
             antigravity.objectWillChange.eraseToAnyPublisher(),
             deepseek.objectWillChange.eraseToAnyPublisher(),
             opencodeGo.objectWillChange.eraseToAnyPublisher(),
-            kiro.objectWillChange.eraseToAnyPublisher()
+            kiro.objectWillChange.eraseToAnyPublisher(),
+            codex.objectWillChange.eraseToAnyPublisher()
         )
         .receive(on: DispatchQueue.main)
         .sink { [weak self] in self?.objectWillChange.send() }
@@ -50,6 +52,7 @@ final class ProviderStore: ObservableObject {
         case .deepseek: return deepseek
         case .opencodeGo: return opencodeGo
         case .kiro: return kiro
+        case .codex: return codex
         }
     }
 

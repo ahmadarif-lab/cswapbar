@@ -274,6 +274,8 @@ final class StatusBarController: NSObject {
                 ProviderDropdownView(provider: store.opencodeGo) { OpenCodeGoDropdownExtras(provider: store.opencodeGo) }
             case .kiro:
                 ProviderDropdownView(provider: store.kiro) { KiroDropdownExtras(provider: store.kiro) }
+            case .codex:
+                ProviderDropdownView(provider: store.codex) { CodexDropdownExtras(provider: store.codex) }
             }
         }
         .environmentObject(store.updater)
