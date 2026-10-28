@@ -190,26 +190,59 @@ extension Switcher {
             sessionCreds = nil
             hasLiveSession = false
         }
+        var creds = info.creds
+        if let profile = sessionCreds, !profile.isEmpty, !hasLiveSession {
+            // The session has exited, so its family is nobody's to rotate but
+            // the store's: adopt the profile head into the backup (a consumed
+            // generation until then) and refresh on that credential. An
+            // undecidable adoption keeps the profile credential for the
+            // read-only fetch below rather than POSTing a grant it may
+            // already have consumed.
+            var adopted: Bool?
+            do {
+                adopted = try adoptSessionCredential(info.key, info.email, info.orgUuid)
+            } catch {
+                log.warning("Could not adopt account \(info.key)'s session profile credential into its backup: \(error)")
+            }
+            if adopted == true { creds = profile }
+            if adopted != nil { sessionCreds = nil }
+        }
         if let sessionCreds, !sessionCreds.isEmpty,
            let sessionOAuth = OAuth.extractOAuthData(sessionCreds),
            let token = sessionOAuth["accessToken"]?.stringValue, !token.isEmpty {
-            if !oauth.isTokenExpired(sessionOAuth["expiresAt"]) {
-                let outcome = oauth.tryFetchUsageForAccount(accountNum: info.key, email: info.email, credentials: sessionCreds, isActive: true)
-                return FetchRecord(usage: outcome.usage, error: outcome.error, retryAfter: outcome.retryAfter)
+            // The live claude refreshes lazily on its next API call.
+            if oauth.isTokenExpired(sessionOAuth["expiresAt"]) { return FetchRecord(sentinel: UsageSentinel.tokenExpired) }
+            return readOnlyFetch(info, sessionCreds)
+        }
+        if hasLiveSession {
+            // No profile credential to read: the backup serves read-only, and
+            // once the live claude has rotated past it the server refuses it.
+            if oauth.isTokenExpired(OAuth.extractOAuthData(creds)?["expiresAt"]) {
+                return FetchRecord(sentinel: UsageSentinel.tokenExpired)
             }
-            if hasLiveSession { return FetchRecord(sentinel: UsageSentinel.tokenExpired) }
+            return readOnlyFetch(info, creds)
         }
 
         let outcome = oauth.tryFetchUsageForAccount(
             accountNum: info.key,
             email: info.email,
-            credentials: info.creds,
-            isActive: hasLiveSession,
-            refreshVia: hasLiveSession ? nil : { [unowned self] num, email, snapshot in
+            credentials: creds,
+            isActive: false,
+            refreshVia: { [unowned self] num, email, snapshot in
                 self.consumeBackupGrant(num, email, snapshot)
             }
         )
         return FetchRecord(usage: outcome.usage, error: outcome.error, retryAfter: outcome.retryAfter, struckFp: outcome.struckFp)
+    }
+
+    /// A fetch with a live session's credential, which cswap must never
+    /// refresh. A 401 is the live claude having rotated past the copy we
+    /// hold; it renews on its own next call, so the slot reads as expired
+    /// (not failing) and resumes once the session renews or exits.
+    private func readOnlyFetch(_ info: AccountInfo, _ creds: String) -> FetchRecord {
+        let outcome = oauth.tryFetchUsageForAccount(accountNum: info.key, email: info.email, credentials: creds, isActive: true)
+        if outcome.error == "http-401" { return FetchRecord(sentinel: UsageSentinel.tokenExpired) }
+        return FetchRecord(usage: outcome.usage, error: outcome.error, retryAfter: outcome.retryAfter)
     }
 
     /// `_fetch_active_usage`: usage for the live account, refreshing an

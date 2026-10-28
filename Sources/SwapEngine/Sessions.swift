@@ -31,6 +31,27 @@ enum Sessions {
         return "Claude Code-credentials-\(digest.prefix(8))"
     }
 
+    /// Keychain service names that may hold a profile's credential, in
+    /// lookup order. Claude hashes the exported `CLAUDE_CONFIG_DIR`
+    /// verbatim, so a symlinked profile was launched under its own path or
+    /// the target's; reading only the link's name serves a stale seed and
+    /// freezes usage at the last pre-rotation reading.
+    static func keychainServices(_ configDir: String, override: String? = nil) -> [String] {
+        if let override { return [override] }
+        var services = [keychainServiceName(configDir)]
+        guard let target = try? FileManager.default.destinationOfSymbolicLink(atPath: configDir) else { return services }
+        if target.hasPrefix("/") {
+            services.append(keychainServiceName(target))
+            return services
+        }
+        let parent = (configDir as NSString).deletingLastPathComponent
+        let raw = (parent as NSString).appendingPathComponent(target)
+        let lexical = (raw as NSString).standardizingPath
+        if lexical != raw, FS.samefile(lexical, raw) { services.append(keychainServiceName(lexical)) }
+        services.append(keychainServiceName(raw))
+        return services
+    }
+
     /// Written as a SIBLING of the profile dir, read from both locations.
     static func staleMarkerFor(_ sessionDir: URL) -> URL {
         sessionDir.deletingLastPathComponent().appendingPathComponent(".\(sessionDir.lastPathComponent)\(staleMarker)")
@@ -72,26 +93,26 @@ enum Sessions {
     ) throws -> String? {
         let directory = URL(fileURLWithPath: configDir)
         guard FS.isDirectory(directory) else { return nil }
-        let attempts = strictKeychain ? 2 : 1
-        for attempt in 0..<attempts {
-            do {
-                let creds = try keychain.getPassword(
-                    service: keychainService ?? keychainServiceName(configDir),
-                    account: keychain.accountName()
-                )
-                if let creds, !creds.isEmpty { return creds }
-                break
-            } catch {
-                if attempt + 1 < attempts {
-                    Thread.sleep(forTimeInterval: 0.3)
-                    continue
+        for service in keychainServices(configDir, override: keychainService) {
+            let attempts = strictKeychain ? 2 : 1
+            for attempt in 0..<attempts {
+                do {
+                    let creds = try keychain.getPassword(service: service, account: keychain.accountName())
+                    if let creds, !creds.isEmpty { return creds }
+                    break
+                } catch {
+                    if attempt + 1 < attempts {
+                        Thread.sleep(forTimeInterval: 0.3)
+                        continue
+                    }
+                    if strictKeychain {
+                        throw SwapError.credentialRead(
+                            "Keychain entry for profile \(configDir) is unreadable (locked or busy) — unlock the keychain and retry: \(error)"
+                        )
+                    }
+                    // Best-effort read: the plaintext seed is the next-best truth.
+                    return try? FS.readText(directory.appendingPathComponent(".credentials.json"))
                 }
-                if strictKeychain {
-                    throw SwapError.credentialRead(
-                        "Keychain entry for profile \(configDir) is unreadable (locked or busy) — unlock the keychain and retry: \(error)"
-                    )
-                }
-                break
             }
         }
         return try? FS.readText(directory.appendingPathComponent(".credentials.json"))
@@ -120,15 +141,24 @@ enum Sessions {
     }
 
     /// Live Claude instances for a profile (from its `sessions/<pid>.json`
-    /// records), and how many records could not be read.
+    /// records), and how many records could not be read. A record is live
+    /// only while its pid is alive AND still belongs to the claude that
+    /// wrote it. A directory that cannot be listed counts as 1 unreadable
+    /// record, never as empty; only a missing one is genuinely empty.
     static func scanLiveSessions(_ sessionDir: URL) -> (pids: [Int], unreadable: Int) {
         guard FS.exists(sessionDir) else { return ([], 0) }
         let dir = sessionDir.appendingPathComponent("sessions")
-        guard FS.isDirectory(dir),
-              let names = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return ([], 0) }
+        let names: [String]
+        do {
+            names = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+        } catch let error as NSError {
+            let missing = error.code == NSFileReadNoSuchFileError
+                || (error.domain == NSPOSIXErrorDomain && error.code == Int(ENOENT))
+            return missing ? ([], 0) : ([], 1)
+        }
         var pids: [Int] = []
         var unreadable = 0
-        for name in names where name.hasSuffix(".json") {
+        for name in names where name.lowercased().hasSuffix(".json") {
             let path = dir.appendingPathComponent(name)
             guard let data = try? Data(contentsOf: path),
                   let obj = (try? JSONValue.parse(data))?.objectValue,
@@ -141,9 +171,64 @@ enum Sessions {
                 unreadable += 1
                 continue
             }
-            if isPidAlive(pid) { pids.append(pid) }
+            if isPidAlive(pid), pidMatchesRecord(pid, procStart: obj["procStart"]?.stringValue) {
+                pids.append(pid)
+            }
         }
         return (pids, unreadable)
+    }
+
+    /// Nothing runs against this profile AND every record was readable. The
+    /// predicate for "safe to rewrite or remove": not knowing is not "empty".
+    static func profileIsQuiescent(_ sessionDir: URL) -> Bool {
+        let (pids, unreadable) = scanLiveSessions(sessionDir)
+        return pids.isEmpty && unreadable == 0
+    }
+
+    /// Slack for the small clock steps that move a `ps` start time.
+    static let pidReuseSlack: TimeInterval = 120
+    private static let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+    /// `ps -o lstart=` as epoch seconds (`Wed Sep  2 20:35:59 2026`, under
+    /// `LC_ALL=C TZ=UTC`). Parsed by hand: month names are locale-bound.
+    static func lstartSeconds(_ text: String) -> Int? {
+        let parts = text.split(whereSeparator: { $0 == " " })
+        guard parts.count == 5, let month = months.firstIndex(of: String(parts[1])),
+              let day = Int(parts[2]), let year = Int(parts[4]) else { return nil }
+        let clock = parts[3].split(separator: ":").compactMap { Int($0) }
+        guard clock.count == 3 else { return nil }
+        var tm = tm()
+        tm.tm_year = Int32(year - 1900); tm.tm_mon = Int32(month); tm.tm_mday = Int32(day)
+        tm.tm_hour = Int32(clock[0]); tm.tm_min = Int32(clock[1]); tm.tm_sec = Int32(clock[2])
+        return Int(timegm(&tm))
+    }
+
+    private static func ps(_ pid: Int, _ columns: [String]) -> String? {
+        var env = ProcessInfo.processInfo.environment
+        env["LC_ALL"] = "C"
+        env["TZ"] = "UTC"
+        guard let result = try? Subprocess.run(
+            "/bin/ps", ["-o", columns.map { "\($0)=" }.joined(separator: ","), "-p", String(pid)],
+            environment: env, timeout: 5
+        ), result.status == 0 else { return nil }
+        let text = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : text
+    }
+
+    /// Is the live process at `pid` the one that wrote a record stamped
+    /// `procStart`? A recycled pid belongs to a process that started after
+    /// the recorded claude did; only that direction disqualifies, and only a
+    /// stranger. Everything unknowable passes: "cannot tell" must never turn
+    /// a live session into "nobody there".
+    static func pidMatchesRecord(_ pid: Int, procStart: String?) -> Bool {
+        guard let procStart, !procStart.isEmpty else { return true }
+        // All-digit stamps are Linux /proc ticks; there is no /proc here.
+        if procStart.allSatisfy(\.isNumber) { return true }
+        guard let recorded = lstartSeconds(procStart),
+              let text = ps(pid, ["lstart"]), let started = lstartSeconds(text),
+              Double(started) > Double(recorded) + pidReuseSlack else { return true }
+        guard let command = ps(pid, ["comm", "args"]) else { return true }
+        return command.lowercased().contains("claude")
     }
 
     static func isPidAlive(_ pid: Int) -> Bool {

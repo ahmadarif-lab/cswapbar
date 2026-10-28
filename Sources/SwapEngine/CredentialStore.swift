@@ -24,11 +24,17 @@ enum KeychainService {
 enum CredentialShape {
     static let sharedKeys = ["mcpOAuth", "mcpOAuthClientConfig", "mcpXaaIdp", "mcpXaaIdpConfig", "pluginSecrets"]
 
-    /// A bare `sk-ant-api…` key, never a JSON object.
+    static let oauthTokenPrefixes = ["sk-ant-oat", "sk-ant-ort"]
+
+    /// A bare `sk-ant-…` Console key of any family (`api03`, `usr`, service
+    /// account), never a JSON object. Everything carrying an OAuth token
+    /// prefix is excluded rather than allow-listing key prefixes, so a
+    /// garbled setup-token can never be activated as an API key.
     static func looksLikeAPIKey(_ credentials: String?) -> Bool {
         guard let credentials, !credentials.isEmpty else { return false }
         let text = credentials.trimmingCharacters(in: .whitespacesAndNewlines)
-        return text.hasPrefix("sk-ant-api") && !text.hasPrefix("{")
+        guard !text.hasPrefix("{"), text.hasPrefix("sk-ant-") else { return false }
+        return !oauthTokenPrefixes.contains { text.hasPrefix($0) }
     }
 
     static func credentialObject(_ credentials: String?) -> JSONObject? {

@@ -72,6 +72,29 @@ enum ClaudeLocks {
         return path.deletingLastPathComponent().appendingPathComponent(path.lastPathComponent + ".lock")
     }
 
+    static let takeoverSuffix = ".takeover"
+    static let takeoverStaleness: TimeInterval = 5
+
+    /// Remove `lockDir` if it is still stale, serialized through a sibling
+    /// `.takeover` directory so two waiters that saw the same dead holder
+    /// cannot both rmdir (the second would remove the first's fresh lock).
+    /// Claude Code never looks at the sibling, so the lock protocol is intact.
+    static func removeIfStillStale(_ lockDir: URL, staleness: TimeInterval) -> Bool {
+        let takeover = lockDir.deletingLastPathComponent()
+            .appendingPathComponent(lockDir.lastPathComponent + takeoverSuffix)
+        if mkdir(takeover.path, 0o777) != 0 {
+            if errno == EEXIST, let mtime = FS.mtime(takeover),
+               Date().timeIntervalSince1970 - mtime > takeoverStaleness {
+                rmdir(takeover.path)  // its holder died mid-takeover
+            }
+            return false
+        }
+        defer { rmdir(takeover.path) }
+        // Re-check inside: the waiter before us may already have retaken it.
+        guard let mtime = FS.mtime(lockDir), Date().timeIntervalSince1970 - mtime > staleness else { return false }
+        return rmdir(lockDir.path) == 0
+    }
+
     /// `proper_lockfile`: `mkdir` is the mutex; a holder older than
     /// `staleness` is taken over; the directory mtime is touched while held.
     static func properLockfile<T>(
@@ -95,7 +118,7 @@ enum ClaudeLocks {
             }
             guard let heldMtime = FS.mtime(lockDir) else { continue }
             if Date().timeIntervalSince1970 - heldMtime > staleness {
-                if rmdir(lockDir.path) != 0 { usleep(50_000) }
+                if !removeIfStillStale(lockDir, staleness: staleness) { usleep(50_000) }
                 continue
             }
             usleep(UInt32(250_000 + Double.random(in: 0..<250_000)))

@@ -130,17 +130,14 @@ final class Switcher {
         return url.deletingLastPathComponent().appendingPathComponent(stem + suffix)
     }
 
-    /// `_write_json`: temp file, validated, 0600, then renamed into place.
+    /// `_write_json`: validated, then published by temp file + rename at
+    /// 0600 (through a symlinked destination, so the link survives).
     func writeJSON(_ path: URL, _ data: JSONObject) throws {
         let content = JSONValue.object(data).serialized(indent: 2)
-        let temp = Self.withSuffix(path, ".\(getpid()).tmp")
-        try FS.writeText(temp, content)
-        guard (try? JSONValue.parse(FS.readText(temp))) != nil else {
-            try? FS.unlinkIfPresent(temp)
+        guard (try? JSONValue.parse(Data(content.utf8))) != nil else {
             throw SwapError.config("Generated invalid JSON")
         }
-        try FS.chmod(temp, 0o600)
-        try FS.rename(temp, path)
+        try FS.atomicWrite(content, to: path)
     }
 
     /// Copy an unreadable file aside (0600, never clobbering an earlier copy)
@@ -366,8 +363,7 @@ final class Switcher {
 
     func writeAccountConfig(_ num: String, _ email: String, _ config: String) throws {
         let path = configPath(num, email)
-        try FS.writeText(path, config)
-        try FS.chmod(path, 0o600)
+        try FS.atomicWrite(config, to: path)
     }
 
     func readAccountCredentials(_ num: String, _ email: String) -> String {

@@ -173,6 +173,18 @@ the `claude-swap` Keychain service, and Claude Code's own credential and lock fi
 claude-swap release changes any of those paths, port the change and bump
 `AccountEngine.upstreamVersion`.
 
+The engine is partly synced to 0.29.0 (the version constant stays at 0.26.0 until the rest lands).
+Ported from 0.27–0.29: adopting an exited session profile's credential into its backup before a
+switch or refresh (and refusing to activate a consumed generation), recycled-pid detection for
+session records, symlinked-profile Keychain lookup, Claude Code 2.1.299's `.config.json` rule,
+`sk-ant-usr-…` and other Console key families, atomic 0600 writes that go through symlinks, and
+serialized stale-lock takeover. Not ported: the Keychain read cache/backoff, the refused-credential
+stamp for live sessions, and the autoswitch/priority/`import-usage` features (CLI-only).
+
+Switching accounts while Claude Code is running asks for confirmation first: the prompt cache and
+Sonnet 5.5 / Haiku 5.5 thinking blocks are tied to the account that produced them, so the next turn
+re-sends the whole conversation at full price.
+
 ## License
 
 MIT

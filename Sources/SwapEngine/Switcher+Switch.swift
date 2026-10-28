@@ -201,10 +201,8 @@ extension Switcher {
         try refuseSessionShell()
         let preEmail = Self.str(Self.record(try getSequenceData(), target), "email")
         if !preEmail.isEmpty {
-            let pids = liveSessionPids(target, preEmail)
-            if !pids.isEmpty {
-                warn("Account-\(target) (\(preEmail)) has a live session-mode Claude instance (PID \(pids.map(String.init).joined(separator: ", "))). Running the same account as both the default login and a session can make one copy's token go stale if the server rotates it. If the session later fails to authenticate, exit it and re-run 'cswap run \(target)'.")
-            }
+            let preOrg = Self.str(Self.record(try getSequenceData(), target), "organizationUuid")
+            try guardSessionDrift(onSwitchTo: target, email: preEmail, orgUuid: preOrg)
         }
         let provenance = given ?? prefetchLiveIdentity()
 
@@ -285,7 +283,7 @@ extension Switcher {
         } catch {
             if configWritten, let rollbackConfigText {
                 do {
-                    try FS.writeText(configPath, rollbackConfigText)
+                    try FS.atomicWrite(rollbackConfigText, to: configPath)
                     try FS.chmod(configPath, 0o600)
                 } catch {
                     log.error("Failed to rollback config: \(error)")
@@ -395,7 +393,7 @@ extension Switcher {
                 case "credentials_written":
                     try store.writeCredentials(originalCreds)
                 case "config_written":
-                    try FS.writeText(configPath, originalConfig)
+                    try FS.atomicWrite(originalConfig, to: configPath)
                     try FS.chmod(configPath, 0o600)
                 case "sequence_updated":
                     if var data = try getSequenceData() {

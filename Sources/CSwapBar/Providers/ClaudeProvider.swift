@@ -134,7 +134,23 @@ final class ClaudeProvider: ObservableObject, AccountMutating, WarmingUp {
 
     func switchTo(_ account: ProviderAccount) async {
         guard let raw = rawAccount(for: account), !raw.active else { return }
+        // Only with another account to move between, and only while Claude Code is running.
+        let running = rawAccounts.count > 1 ? await engine.runningClaudeSessions() : []
+        if !running.isEmpty, !confirmSwitchWithRunningSessions(count: running.count, to: account.displayName) { return }
         await withBusy(raw.number) { try await self.engine.switchTo(raw.number) }
+    }
+
+    /// Prompt caches and (for Sonnet 5.5 / Haiku 5.5) thinking blocks belong
+    /// to the account that produced them, so a session carried across to
+    /// another account re-reads its whole context at full input price and
+    /// loses its earlier reasoning.
+    private func confirmSwitchWithRunningSessions(count: Int, to name: String) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "Claude Code is running (\(count) session\(count == 1 ? "" : "s"))"
+        alert.informativeText = "Switching to \(name) mid-session makes the next turn re-send the whole conversation at full price: the prompt cache and earlier thinking belong to the current account. Finish or restart the session first to avoid the extra token cost."
+        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: "Switch Anyway")
+        return alert.runModal() == .alertSecondButtonReturn
     }
 
     func toggleDisabled(_ account: ProviderAccount) async {

@@ -10,6 +10,8 @@ public final class AccountEngine: @unchecked Sendable {
 
     /// The claude-swap release this engine was ported from.
     public static let upstreamVersion = "0.26.0"
+    // Partially synced to 0.29.0: session adoption, atomic writes, lock takeover,
+    // config-file rule and API-key classification are ported (see README).
 
     private let queue = DispatchQueue(label: "cswapbar.account-engine", qos: .userInitiated)
     private let makeEnvironment: () -> EngineEnvironment
@@ -36,6 +38,14 @@ public final class AccountEngine: @unchecked Sendable {
 
     public func switchTo(_ number: Int) async throws {
         try await run { try $0.switchTo(String(number)) }
+    }
+
+    /// PIDs of Claude Code instances currently running against the default
+    /// login (`~/.claude/sessions/<pid>.json`, recycled pids excluded).
+    public func runningClaudeSessions() async -> [Int] {
+        (try? await run { switcher in
+            Sessions.scanLiveSessions(switcher.paths.claudeConfigHome()).pids
+        }) ?? []
     }
 
     public func disable(_ number: Int) async throws {
