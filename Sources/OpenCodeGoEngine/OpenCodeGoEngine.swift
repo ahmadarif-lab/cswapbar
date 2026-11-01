@@ -67,6 +67,9 @@ public final class OpenCodeGoEngine: @unchecked Sendable {
     private let credentialLock = NSLock()
     private var cachedCredential: OpenCodeGoCredential?
     private var credentialLoaded = false
+    /// A refresh in flight, shared by concurrent callers: the refresh token
+    /// rotates, so a second exchange of the same one would be rejected.
+    private var refreshTask: Task<OpenCodeGoCredential, Error>?
 
     init(
         session: URLSession = .shared,
@@ -176,6 +179,65 @@ public final class OpenCodeGoEngine: @unchecked Sendable {
     // MARK: - Console route (OAuth session)
 
     private func fetchConsoleUsage(credential: OpenCodeGoCredential) async throws -> OpenCodeGoUsageSummary {
+        var credential = credential
+        var refreshed = false
+        // OpenCode only renews its access token when it runs, so by the time
+        // CSwapBar looks it has often lapsed.
+        if credential.isExpired(), credential.refreshToken != nil {
+            credential = try await renewedCredential(from: credential)
+            refreshed = true
+        }
+        do {
+            return try await consoleUsage(credential: credential)
+        } catch OpenCodeGoEngineError.sessionExpired where !refreshed && credential.refreshToken != nil {
+            // Rejected before its recorded expiry (revoked, clock skew):
+            // one renewal, one retry.
+            credential = try await renewedCredential(from: credential)
+            return try await consoleUsage(credential: credential)
+        }
+    }
+
+    /// Trades the refresh token for a new session and stores it where
+    /// OpenCode keeps its own, then returns it. Concurrent calls share one
+    /// exchange.
+    private func renewedCredential(from stale: OpenCodeGoCredential) async throws -> OpenCodeGoCredential {
+        let (task, owner) = credentialLock.withLock { () -> (Task<OpenCodeGoCredential, Error>, Bool) in
+            if let running = refreshTask { return (running, false) }
+            let created = Task { [session, authFileURL, databaseURL] () throws -> OpenCodeGoCredential in
+                // OpenCode may have renewed it itself since this was read;
+                // its token is then newer than anything this could fetch, and
+                // the old refresh token is already spent.
+                if let current = try? OpenCodeGoCredentialReader.read(from: authFileURL, databaseURL: databaseURL),
+                   current.kind == .oauth, current.token != stale.token, !current.isExpired() {
+                    return current
+                }
+                let tokens = try await OpenCodeGoTokenRefresher.refresh(stale, session: session)
+                let renewed = OpenCodeGoTokenRefresher.applying(tokens, to: stale)
+                if OpenCodeGoTokenRefresher.persist(tokens, for: stale, authFileURL: authFileURL, databaseURL: databaseURL) {
+                    DiagnosticLog.log(logTag, "renewed the OpenCode session and saved it")
+                } else {
+                    DiagnosticLog.log(logTag, "renewed the OpenCode session but could not save it; OpenCode may need a fresh sign-in")
+                }
+                return renewed
+            }
+            refreshTask = created
+            return (created, true)
+        }
+
+        let result = await task.result
+        if owner {
+            credentialLock.withLock {
+                refreshTask = nil
+                if case .success(let renewed) = result {
+                    cachedCredential = renewed
+                    credentialLoaded = true
+                }
+            }
+        }
+        return try result.get()
+    }
+
+    private func consoleUsage(credential: OpenCodeGoCredential) async throws -> OpenCodeGoUsageSummary {
         let workspaceID = try await workspaceID(for: credential)
 
         var request = URLRequest(url: Self.consoleStatusURL)

@@ -46,6 +46,38 @@ public struct OpenCodeGoCredential: Sendable, Equatable {
     /// (`opencode auth login` does, for an OAuth session). Saves a lookup
     /// against the console's own workspace list.
     public let workspaceID: String?
+    /// The OAuth refresh token, when the store kept one. The access token is
+    /// short-lived; this is what renews it.
+    public let refreshToken: String?
+    /// When the access token stops working, as OpenCode recorded it.
+    public let expiresAt: Date?
+    /// The console the session was issued by (`metadata.server`), so a
+    /// refresh goes to the same place the sign-in did.
+    public let server: String?
+    /// The `credential` row it came from, so a refreshed token can be written
+    /// back in place. `nil` for `auth.json`.
+    public let rowID: String?
+
+    init(
+        kind: Kind, token: String, entryName: String, source: Source, workspaceID: String?,
+        refreshToken: String? = nil, expiresAt: Date? = nil, server: String? = nil, rowID: String? = nil
+    ) {
+        self.kind = kind
+        self.token = token
+        self.entryName = entryName
+        self.source = source
+        self.workspaceID = workspaceID
+        self.refreshToken = refreshToken
+        self.expiresAt = expiresAt
+        self.server = server
+        self.rowID = rowID
+    }
+
+    /// Whether the OAuth access token is expired, or about to be.
+    func isExpired(now: Date = Date(), leeway: TimeInterval = 60) -> Bool {
+        guard kind == .oauth, let expiresAt else { return false }
+        return expiresAt <= now.addingTimeInterval(leeway)
+    }
 }
 
 /// Reads the credential OpenCode itself stores, so there is nothing to paste
@@ -123,7 +155,7 @@ public enum OpenCodeGoCredentialReader {
         // `active` picks the credential `opencode auth switch` has selected;
         // the newest wins otherwise.
         let sql = """
-        SELECT integration_id, value FROM credential
+        SELECT integration_id, value, id FROM credential
         WHERE integration_id IN ('opencode-go', 'opencode')
         ORDER BY active DESC, time_updated DESC
         """
@@ -139,9 +171,10 @@ public enum OpenCodeGoCredentialReader {
             guard let nameText = sqlite3_column_text(query, 0), let valueText = sqlite3_column_text(query, 1) else { continue }
             let name = String(cString: nameText)
             let raw = String(cString: valueText)
+            let rowID = sqlite3_column_text(query, 2).map { String(cString: $0) }
             guard let data = raw.data(using: .utf8),
                   let entry = try? JSONDecoder().decode(StoredValue.self, from: data) else { continue }
-            if let credential = entry.credential(entryName: name, source: .database) { candidates.append(credential) }
+            if let credential = entry.credential(entryName: name, source: .database, rowID: rowID) { candidates.append(credential) }
         }
         return candidates.first { $0.kind == .apiKey } ?? candidates.first
     }
@@ -152,13 +185,19 @@ public enum OpenCodeGoCredentialReader {
         let type: String?
         let key: String?
         let access: String?
+        let refresh: String?
+        /// Milliseconds since the epoch.
+        let expires: Double?
         let metadata: Metadata?
 
         struct Metadata: Decodable {
             let orgID: String?
+            let server: String?
         }
 
-        func credential(entryName: String, source: OpenCodeGoCredential.Source) -> OpenCodeGoCredential? {
+        func credential(
+            entryName: String, source: OpenCodeGoCredential.Source, rowID: String? = nil
+        ) -> OpenCodeGoCredential? {
             let workspaceID = metadata?.orgID?.trimmingCharacters(in: .whitespacesAndNewlines)
             if let key = key?.trimmingCharacters(in: .whitespacesAndNewlines), !key.isEmpty {
                 return OpenCodeGoCredential(
@@ -167,9 +206,14 @@ public enum OpenCodeGoCredentialReader {
                 )
             }
             if let access = access?.trimmingCharacters(in: .whitespacesAndNewlines), !access.isEmpty {
+                let refresh = refresh?.trimmingCharacters(in: .whitespacesAndNewlines)
                 return OpenCodeGoCredential(
                     kind: .oauth, token: access, entryName: entryName, source: source,
-                    workspaceID: workspaceID?.isEmpty == false ? workspaceID : nil
+                    workspaceID: workspaceID?.isEmpty == false ? workspaceID : nil,
+                    refreshToken: refresh?.isEmpty == false ? refresh : nil,
+                    expiresAt: expires.map { Date(timeIntervalSince1970: $0 / 1000) },
+                    server: metadata?.server,
+                    rowID: rowID
                 )
             }
             return nil
