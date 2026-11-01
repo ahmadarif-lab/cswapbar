@@ -80,7 +80,8 @@ enum OpenCodeGoUsageParsing {
         return OpenCodeGoUsageSummary(
             windows: parsed,
             planName: planName(status.product ?? status.renewalProduct),
-            renewsAt: renewsAt
+            renewsAt: renewsAt,
+            cancelsAtPeriodEnd: access.cancelAtPeriodEnd ?? status.cancelAtPeriodEnd ?? false
         )
     }
 

@@ -98,4 +98,60 @@ final class CodexUsageParsingTests: XCTestCase {
             guard case CodexEngineError.decoding = error else { return XCTFail("unexpected \(error)") }
         }
     }
+
+    // MARK: - Subscription
+
+    private func subscription(_ json: String, accountID: String = "acc-1") throws -> CodexSubscription? {
+        let response = try JSONDecoder().decode(CodexAccountCheckResponse.self, from: Data(json.utf8))
+        return CodexUsageParsing.subscription(from: response, accountID: accountID)
+    }
+
+    func testRenewingPlanReportsTheRenewalDate() throws {
+        let result = try XCTUnwrap(try subscription("""
+        {"accounts": {"default": {"entitlement": {"has_active_subscription": true,
+          "renews_at": "2026-11-10T12:10:09+00:00", "cancels_at": null},
+          "last_active_subscription": {"will_renew": true}}}}
+        """))
+        XCTAssertFalse(result.isCancelled)
+        XCTAssertEqual(result.date.timeIntervalSince1970, 1_794_312_609, accuracy: 0.01)
+    }
+
+    /// What a plan cancelled from Settings > Billing really looks like: the
+    /// entitlement still carries `renews_at`, only `will_renew` changed.
+    func testCancelledPlanIsReadFromWillRenew() throws {
+        let result = try XCTUnwrap(try subscription("""
+        {"accounts": {"acc-1": {"entitlement": {"has_active_subscription": true,
+          "renews_at": "2026-11-10T12:10:09+00:00", "cancels_at": null, "expires_at": "2026-11-10T18:10:09+00:00"},
+          "last_active_subscription": {"will_renew": false, "cancellation_outcome": "deactivate"}}}}
+        """))
+        XCTAssertTrue(result.isCancelled)
+        XCTAssertEqual(result.date.timeIntervalSince1970, 1_794_312_609, accuracy: 0.01)
+    }
+
+    func testAnExplicitCancelDateAlsoCountsAsCancelled() throws {
+        let result = try XCTUnwrap(try subscription("""
+        {"accounts": {"acc-1": {"entitlement": {"has_active_subscription": true,
+          "renews_at": null, "cancels_at": "2026-11-10T12:10:09.000000+00:00"}}}}
+        """))
+        XCTAssertTrue(result.isCancelled)
+        XCTAssertEqual(result.date.timeIntervalSince1970, 1_794_312_609, accuracy: 0.01)
+    }
+
+    func testTheLoginsOwnAccountWinsOverDefault() throws {
+        let result = try XCTUnwrap(try subscription("""
+        {"accounts": {
+          "default": {"entitlement": {"has_active_subscription": true, "renews_at": "2026-12-01T00:00:00+00:00"}},
+          "acc-1": {"entitlement": {"has_active_subscription": true, "renews_at": "2026-11-10T12:10:09+00:00"}}}}
+        """))
+        XCTAssertEqual(result.date.timeIntervalSince1970, 1_794_312_609, accuracy: 0.01)
+    }
+
+    func testFreePlanHasNoSubscription() throws {
+        XCTAssertNil(try subscription("""
+        {"accounts": {"default": {"entitlement": {"has_active_subscription": false,
+          "renews_at": null, "cancels_at": null}}}}
+        """))
+        XCTAssertNil(try subscription(#"{"accounts": {}}"#))
+        XCTAssertNil(try subscription("{}"))
+    }
 }

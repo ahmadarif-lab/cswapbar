@@ -24,12 +24,15 @@ struct ProviderAccount: Identifiable, Equatable {
     /// Prepaid credit instead of usage windows (DeepSeek) -- shown in place
     /// of the bars, and as text next to the menu bar icon.
     let balance: ProviderBalance?
+    /// Billing rather than quota: when the paid plan renews or stops. Drawn in
+    /// its own section so it isn't mistaken for a usage figure.
+    let subscription: ProviderDetailRow?
 
     init(
         id: String, displayName: String, subtitle: String? = nil, pools: [UsagePool] = [],
         statusText: String? = nil, isStale: Bool = false, staleAgeSeconds: Double? = nil,
         claudeDetail: ClaudeAccountDetail? = nil, detailRows: [ProviderDetailRow] = [],
-        balance: ProviderBalance? = nil
+        balance: ProviderBalance? = nil, subscription: ProviderDetailRow? = nil
     ) {
         self.id = id
         self.displayName = displayName
@@ -41,6 +44,7 @@ struct ProviderAccount: Identifiable, Equatable {
         self.claudeDetail = claudeDetail
         self.detailRows = detailRows
         self.balance = balance
+        self.subscription = subscription
     }
 }
 
@@ -70,5 +74,19 @@ struct ProviderDetailRow: Identifiable, Equatable {
         self.label = label
         self.value = value
         self.secondaryValue = secondaryValue
+    }
+}
+
+extension ProviderDetailRow {
+    /// "Renews Nov 10, 19:10", or "Ends ..." with a note once cancelled, for a
+    /// subscription whose billing period ends on `date`.
+    static func subscription(date: Date, cancelled: Bool, now: Date = Date()) -> ProviderDetailRow {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, HH:mm"
+        let label = cancelled ? (date <= now ? "Ended" : "Ends") : "Renews"
+        return ProviderDetailRow(
+            label: label, value: formatter.string(from: date),
+            secondaryValue: cancelled ? "Cancelled, won't renew" : nil
+        )
     }
 }

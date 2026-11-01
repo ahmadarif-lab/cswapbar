@@ -108,7 +108,12 @@ final class OpenCodeGoProvider: ObservableObject, WarmingUp {
         return ProviderAccount(
             id: "opencode-go", displayName: "OpenCode Go",
             subtitle: summary.planName.map { "\($0) plan" } ?? "Go subscription",
-            pools: pools, detailRows: detailRows
+            pools: pools, detailRows: detailRows,
+            // Only the console route knows when the period ends. A cancelled
+            // plan simply stops then, which nothing else here would show.
+            subscription: summary.renewsAt.map {
+                .subscription(date: $0, cancelled: summary.cancelsAtPeriodEnd)
+            }
         )
     }
 

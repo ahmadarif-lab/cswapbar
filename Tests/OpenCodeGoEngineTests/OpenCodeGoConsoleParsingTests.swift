@@ -86,6 +86,25 @@ final class OpenCodeGoConsoleParsingTests: XCTestCase {
         XCTAssertEqual(monthly.resetsAt?.timeIntervalSince1970 ?? 0, 1793536209, accuracy: 0.01)
     }
 
+    func testReportsACancelledSubscription() throws {
+        let json = """
+        {"product": "go", "cancelAtPeriodEnd": true, "access": {"endsAt": "2026-11-01T12:30:09.000Z",
+         "cancelAtPeriodEnd": true, "meters": {
+          "fiveHour": {"limitMicroCents": "1200000000", "usedMicroCents": "0"}
+        }}}
+        """
+        XCTAssertTrue(try summarize(json).cancelsAtPeriodEnd)
+    }
+
+    func testRenewingSubscriptionIsNotMarkedCancelled() throws {
+        let json = """
+        {"product": "go", "access": {"endsAt": "2026-11-01T12:30:09.000Z", "meters": {
+          "fiveHour": {"limitMicroCents": "1200000000", "usedMicroCents": "0"}
+        }}}
+        """
+        XCTAssertFalse(try summarize(json).cancelsAtPeriodEnd)
+    }
+
     func testWeeklyAndMonthlyAreOptional() throws {
         let json = """
         {"product": "go", "access": {"meters": {

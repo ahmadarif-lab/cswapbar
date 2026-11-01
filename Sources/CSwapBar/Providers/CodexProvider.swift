@@ -107,7 +107,8 @@ final class CodexProvider: ObservableObject, WarmingUp {
         return ProviderAccount(
             id: "codex", displayName: "Codex",
             subtitle: subtitle.isEmpty ? nil : subtitle.joined(separator: " · "),
-            pools: pools, detailRows: detailRows
+            pools: pools, detailRows: detailRows,
+            subscription: summary.subscription.map { .subscription(date: $0.date, cancelled: $0.isCancelled) }
         )
     }
 

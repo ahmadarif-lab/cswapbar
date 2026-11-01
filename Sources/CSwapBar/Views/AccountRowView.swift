@@ -117,6 +117,9 @@ struct AccountRowView<P: Provider>: View {
             if !account.detailRows.isEmpty {
                 quotaDetails
             }
+            if let subscription = account.subscription {
+                subscriptionSection(subscription)
+            }
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 10)
@@ -154,25 +157,39 @@ struct AccountRowView<P: Provider>: View {
                 .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(.tertiary)
             ForEach(account.detailRows) { row in
-                VStack(alignment: .trailing, spacing: 1) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(row.label)
-                            .font(.system(size: 10.5))
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(row.value)
-                            .font(.system(size: 10.5, weight: .medium))
-                            .foregroundStyle(.primary)
-                    }
-                    if let secondary = row.secondaryValue {
-                        Text(secondary)
-                            .font(.system(size: 9))
-                            .foregroundStyle(.tertiary)
-                    }
-                }
+                detailRow(row)
             }
         }
         .padding(.top, 4)
+    }
+
+    private func subscriptionSection(_ row: ProviderDetailRow) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("SUBSCRIPTION")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.tertiary)
+            detailRow(row)
+        }
+        .padding(.top, 4)
+    }
+
+    private func detailRow(_ row: ProviderDetailRow) -> some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(row.label)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(row.value)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(.primary)
+            }
+            if let secondary = row.secondaryValue {
+                Text(secondary)
+                    .font(.system(size: 9))
+                    .foregroundStyle(.tertiary)
+            }
+        }
     }
 
     /// "Last known · 5h 2m ago (unavailable)".

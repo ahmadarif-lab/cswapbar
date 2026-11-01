@@ -37,6 +37,16 @@ public struct OpenCodeGoUsageSummary: Sendable, Equatable {
     public let planName: String?
     /// End of the current billing period.
     public let renewsAt: Date?
+    /// True when the subscription was cancelled and stops at `renewsAt`
+    /// instead of renewing. Only the console route reports it.
+    public let cancelsAtPeriodEnd: Bool
+
+    public init(windows: [OpenCodeGoWindow], planName: String?, renewsAt: Date?, cancelsAtPeriodEnd: Bool = false) {
+        self.windows = windows
+        self.planName = planName
+        self.renewsAt = renewsAt
+        self.cancelsAtPeriodEnd = cancelsAtPeriodEnd
+    }
 }
 
 // MARK: - API-key endpoint
@@ -95,6 +105,8 @@ struct OpenCodeGoConsoleStatus: Decodable {
     /// True when the workspace falls back to prepaid Zen credit once the
     /// plan's own limits are used up.
     let useBalance: Bool?
+    /// The subscription was cancelled and ends with the billing period.
+    let cancelAtPeriodEnd: Bool?
     let access: Access?
 
     struct Access: Decodable {
@@ -102,6 +114,7 @@ struct OpenCodeGoConsoleStatus: Decodable {
         /// End of the billing period -- also the monthly window's reset, which
         /// the month meter itself doesn't carry.
         let endsAt: String?
+        let cancelAtPeriodEnd: Bool?
         let meters: Meters?
     }
 

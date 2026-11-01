@@ -137,3 +137,76 @@ enum CodexUsageParsing {
         return raw.prefix(1).uppercased() + raw.dropFirst()
     }
 }
+
+/// `GET https://chatgpt.com/backend-api/accounts/check/v4-2023-04-27`: one
+/// entry per account under `accounts`, each with an `entitlement` block. Like
+/// the usage endpoint it isn't published, so everything is optional.
+struct CodexAccountCheckResponse: Decodable {
+    let accounts: [String: Account]?
+
+    struct Account: Decodable {
+        let entitlement: Entitlement?
+        let lastActiveSubscription: LastActiveSubscription?
+
+        enum CodingKeys: String, CodingKey {
+            case entitlement
+            case lastActiveSubscription = "last_active_subscription"
+        }
+    }
+
+    /// Where a cancellation shows up: the entitlement keeps its `renews_at`
+    /// (and a null `cancels_at`) after "Cancel plan", only this flips.
+    struct LastActiveSubscription: Decodable {
+        let willRenew: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case willRenew = "will_renew"
+        }
+    }
+
+    struct Entitlement: Decodable {
+        let hasActiveSubscription: Bool?
+        let renewsAt: String?
+        let cancelsAt: String?
+        let expiresAt: String?
+
+        enum CodingKeys: String, CodingKey {
+            case hasActiveSubscription = "has_active_subscription"
+            case renewsAt = "renews_at"
+            case cancelsAt = "cancels_at"
+            case expiresAt = "expires_at"
+        }
+    }
+}
+
+extension CodexUsageParsing {
+    /// The entitlement of the account the login belongs to (the response also
+    /// carries a `default` entry), as a subscription. Nil without an active
+    /// paid plan or a usable date.
+    static func subscription(from response: CodexAccountCheckResponse, accountID: String) -> CodexSubscription? {
+        guard let accounts = response.accounts,
+              let account = accounts[accountID] ?? accounts["default"] ?? accounts.values.first,
+              let entitlement = account.entitlement,
+              entitlement.hasActiveSubscription == true else { return nil }
+        let cancelsAt = entitlement.cancelsAt.flatMap(date(fromISO:))
+        let cancelled = cancelsAt != nil || account.lastActiveSubscription?.willRenew == false
+        // `expires_at` runs a few hours past the billing date as a grace
+        // period, so it is only the fallback.
+        let candidates = cancelled
+            ? [cancelsAt, entitlement.renewsAt.flatMap(date(fromISO:)), entitlement.expiresAt.flatMap(date(fromISO:))]
+            : [entitlement.renewsAt.flatMap(date(fromISO:)), entitlement.expiresAt.flatMap(date(fromISO:))]
+        guard let date = candidates.compactMap({ $0 }).first else { return nil }
+        return CodexSubscription(date: date, isCancelled: cancelled)
+    }
+
+    /// ChatGPT sends `2026-11-10T12:10:09+00:00`, sometimes with fractional
+    /// seconds.
+    static func date(fromISO raw: String) -> Date? {
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = withFraction.date(from: raw) { return date }
+        let plain = ISO8601DateFormatter()
+        plain.formatOptions = [.withInternetDateTime]
+        return plain.date(from: raw)
+    }
+}

@@ -40,4 +40,22 @@ public struct CodexUsageSummary: Sendable, Equatable {
     public let creditBalance: String?
     /// The server has stopped serving requests until a window resets.
     public let isLimitReached: Bool
+    /// Where the paid plan stands. Nil for a free plan, or when ChatGPT
+    /// wouldn't say -- the usage windows are reported either way.
+    public var subscription: CodexSubscription?
+}
+
+/// The ChatGPT plan's billing state, from the same account check the web app
+/// uses to decide what to show under Settings > Billing.
+public struct CodexSubscription: Sendable, Equatable {
+    /// The end of the paid period: the next payment while the plan renews,
+    /// the last day of access once it was cancelled.
+    public let date: Date
+    /// The plan was cancelled and won't renew.
+    public let isCancelled: Bool
+
+    public init(date: Date, isCancelled: Bool) {
+        self.date = date
+        self.isCancelled = isCancelled
+    }
 }

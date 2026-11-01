@@ -47,8 +47,15 @@ public final class CodexEngine: @unchecked Sendable {
 
     private static let usageURL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!
 
+    private static let accountCheckURL = URL(string: "https://chatgpt.com/backend-api/accounts/check/v4-2023-04-27")!
+    /// Billing dates change once a month; no need to ask on every refresh.
+    private static let subscriptionCacheLifetime: TimeInterval = 3600
+
     private let session: URLSession
     public let authFileURL: URL
+
+    private let subscriptionLock = NSLock()
+    private var cachedSubscription: (accountID: String, value: CodexSubscription?, fetchedAt: Date)?
 
     init(session: URLSession = .shared, authFileURL: URL = CodexCredentialReader.defaultAuthFileURL) {
         self.session = session
@@ -152,7 +159,43 @@ public final class CodexEngine: @unchecked Sendable {
         } catch {
             throw CodexEngineError.decoding("\(error)")
         }
-        return try CodexUsageParsing.summarize(decoded, fallbackPlan: credential.planType)
+        var summary = try CodexUsageParsing.summarize(decoded, fallbackPlan: credential.planType)
+        summary.subscription = await subscription(for: credential)
+        return summary
+    }
+
+    /// Best effort: the usage windows are the point, so a failed lookup just
+    /// leaves the renewal line off.
+    private func subscription(for credential: CodexCredential) async -> CodexSubscription? {
+        let cached = subscriptionLock.withLock { cachedSubscription }
+        if let cached, cached.accountID == credential.accountID,
+           Date().timeIntervalSince(cached.fetchedAt) < Self.subscriptionCacheLifetime {
+            return cached.value
+        }
+
+        var request = URLRequest(url: Self.accountCheckURL)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 15
+        request.setValue("Bearer \(credential.accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(credential.accountID, forHTTPHeaderField: "ChatGPT-Account-Id")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("codex_cli_rs", forHTTPHeaderField: "User-Agent")
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                DiagnosticLog.log(logTag, "subscription lookup returned HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)")
+                return cached?.value
+            }
+            let decoded = try JSONDecoder().decode(CodexAccountCheckResponse.self, from: data)
+            let value = CodexUsageParsing.subscription(from: decoded, accountID: credential.accountID)
+            subscriptionLock.withLock {
+                cachedSubscription = (credential.accountID, value, Date())
+            }
+            return value
+        } catch {
+            DiagnosticLog.log(logTag, "subscription lookup failed: \(DiagnosticLog.describe(error))")
+            return cached?.value
+        }
     }
 }
 
