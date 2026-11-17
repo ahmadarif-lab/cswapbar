@@ -18,9 +18,6 @@ struct ClaudeDropdownExtras: View {
         ActionRow(icon: "person.badge.plus", title: "Add current login") {
             Task { await provider.addFromCurrentLogin() }
         }
-        ActionRow(icon: "key", title: "Add from setup-token…") {
-            provider.openAddTokenWindow()
-        }
         ActionRow(icon: "arrow.clockwise.circle", title: "Refresh current credentials") {
             Task { await provider.refreshCredentials() }
         }

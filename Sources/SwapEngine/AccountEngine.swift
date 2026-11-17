@@ -65,8 +65,4 @@ public final class AccountEngine: @unchecked Sendable {
     public func addCurrentLogin() async throws {
         try await run { try $0.addAccount() }
     }
-
-    public func addToken(_ token: String, email: String?) async throws {
-        try await run { try $0.addAccountFromToken(token, email: email) }
-    }
 }

@@ -81,7 +81,7 @@ appears after a blocked launch.
 - Click any account card to switch to it
 - **Warm up all accounts** — rotates through every account, sends a throwaway `claude -p` to each,
   then returns to the account you started on; can also run on a schedule (see [Providers](#providers))
-- Add an account from the current login or from a setup-token; pause/resume and remove accounts
+- Add an account from the current login; pause/resume and remove accounts
 - Keeps itself up to date: checks for new releases, and a Homebrew install updates in place
 
 Each action does exactly what the matching `cswap` command does, on the same files:
@@ -91,7 +91,6 @@ Each action does exactly what the matching `cswap` command does, on the same fil
 | Account cards, usage bars | `cswap list --json` |
 | Click a card | `cswap switch <n>` |
 | Add current login / Refresh credentials | `cswap add` |
-| Add from setup-token | `cswap add-token <token> [--email …]` |
 | Pause / resume | `cswap disable` / `cswap enable` |
 | Remove | `cswap remove <n>` |
 | Warm up all accounts | a switch + `claude -p` per account |

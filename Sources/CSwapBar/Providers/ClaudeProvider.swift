@@ -184,12 +184,6 @@ final class ClaudeProvider: ObservableObject, AccountMutating, WarmingUp {
         await withBusy(nil) { try await self.engine.addCurrentLogin() }
     }
 
-    func addToken(_ token: String, email: String?) async {
-        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        await withBusy(nil) { try await self.engine.addToken(trimmed, email: email) }
-    }
-
     // MARK: - Warm-up all accounts
     // Port of the `claude-warmup` zsh function: rotate through every managed
     // account, send a throwaway `claude -p "halo"`, then switch back. Unlike
@@ -244,12 +238,6 @@ final class ClaudeProvider: ObservableObject, AccountMutating, WarmingUp {
         try? await Task.sleep(nanoseconds: 4_000_000_000)
         if warmupStatusText == "Warm-up complete." {
             warmupStatusText = nil
-        }
-    }
-
-    func openAddTokenWindow() {
-        WindowPresenter.shared.show(id: AddAccountSheet.windowID, title: "Add account", size: NSSize(width: 320, height: 200)) {
-            AddAccountSheet().environmentObject(self)
         }
     }
 }

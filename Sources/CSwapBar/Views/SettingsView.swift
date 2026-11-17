@@ -456,7 +456,6 @@ private struct ClaudeSettings: View {
         }
         Section {
             Button("Add current login") { Task { await provider.addFromCurrentLogin() } }
-            Button("Add from setup-token…") { provider.openAddTokenWindow() }
             Button("Refresh current credentials") { Task { await provider.refreshCredentials() } }
         } header: {
             SectionTitle("Add")
