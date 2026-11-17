@@ -37,6 +37,15 @@ enum CredentialShape {
         return !oauthTokenPrefixes.contains { text.hasPrefix($0) }
     }
 
+    /// A JSON credential object that holds no Claude login. Claude Code keeps
+    /// MCP/plugin secrets in the same item and recreates it with only those
+    /// keys after a switch to a managed key cleared it; it authenticates
+    /// nothing, so it must not stand in for a managed key.
+    static func isLoginless(_ credentials: String?) -> Bool {
+        guard let obj = credentialObject(credentials) else { return false }
+        return !obj.has("claudeAiOauth")
+    }
+
     static func credentialObject(_ credentials: String?) -> JSONObject? {
         guard let credentials, !credentials.isEmpty, !looksLikeAPIKey(credentials) else { return nil }
         return OAuth.parseObject(credentials)
@@ -189,11 +198,15 @@ final class CredentialStore {
     /// OAuth Keychain → `.credentials.json` → managed API key, classified.
     func readActiveCredentials() -> ActiveCredentials {
         var keychainFailed = false
+        var loginless: ActiveCredentials?
         if useKeychain() {
             let (value, failed) = readActiveOAuthKeychain()
             keychainFailed = failed
             activeReadFailed = failed
-            if let value, !value.isEmpty { return ActiveCredentials(value: value, keychainUnavailable: false) }
+            if let value, !value.isEmpty {
+                if !CredentialShape.isLoginless(value) { return ActiveCredentials(value: value, keychainUnavailable: false) }
+                loginless = ActiveCredentials(value: value, keychainUnavailable: false)
+            }
         } else if residualVerdict == false || activeReadFailed || keychainUnreadable {
             keychainFailed = true
         }
@@ -208,12 +221,15 @@ final class CredentialStore {
                 return ActiveCredentials(value: nil, keychainUnavailable: keychainFailed, degraded: keychainFailed)
             }
             if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return ActiveCredentials(value: text, keychainUnavailable: false, degraded: keychainFailed)
+                let fromFile = ActiveCredentials(value: text, keychainUnavailable: false, degraded: keychainFailed)
+                if !CredentialShape.isLoginless(text) { return fromFile }
+                if loginless == nil { loginless = fromFile }
             }
         }
 
         let key = readManagedKey()
         if !key.isEmpty { return ActiveCredentials(value: key, keychainUnavailable: false, degraded: keychainFailed) }
+        if let loginless { return loginless }
         return ActiveCredentials(value: "", keychainUnavailable: keychainFailed, degraded: keychainFailed)
     }
 

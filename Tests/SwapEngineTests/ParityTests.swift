@@ -39,6 +39,13 @@ final class ParityTests: XCTestCase {
         XCTAssertFalse(CredentialShape.looksLikeAPIKey(nil))
     }
 
+    func testLoginlessObjectIsNotALogin() {
+        XCTAssertTrue(CredentialShape.isLoginless("{\"mcpOAuth\":{\"srv|1\":{\"accessToken\":\"t\"}}}"))
+        XCTAssertFalse(CredentialShape.isLoginless("{\"claudeAiOauth\":{\"accessToken\":\"t\"}}"))
+        XCTAssertFalse(CredentialShape.isLoginless("sk-ant-usr-abc"))
+        XCTAssertFalse(CredentialShape.isLoginless(nil))
+    }
+
     func testAtomicWriteGoesThroughSymlinkAndIsPrivate() throws {
         let dir = try tempDir()
         let real = dir.appendingPathComponent("real.json")

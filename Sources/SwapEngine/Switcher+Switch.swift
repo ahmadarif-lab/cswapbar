@@ -317,7 +317,17 @@ extension Switcher {
 
         var completed: [String] = []
         do {
-            let (kind, foreignSlot) = classifyOutgoing(current, currentEmail, originalCreds, provenance, data)
+            // An API-key slot's backup only ever holds a key: anything else live
+            // (e.g. an item Claude Code recreated with only MCP secrets) would
+            // overwrite the key and lose it.
+            let apiKeySlotLosingKey = (try? accountKind(current)) == "api_key"
+                && !CredentialShape.looksLikeAPIKey(originalCreds)
+            let (kind, foreignSlot) = apiKeySlotLosingKey
+                ? ("own-bytes", nil)
+                : classifyOutgoing(current, currentEmail, originalCreds, provenance, data)
+            if apiKeySlotLosingKey {
+                log.warning("Live credential for API-key account \(current) is not an API key; kept its stored key")
+            }
             switch kind {
             case "foreign", "alien", "known-foreign":
                 try stashLiveCredential(originalCreds, kind, current, provenance.resolved)
