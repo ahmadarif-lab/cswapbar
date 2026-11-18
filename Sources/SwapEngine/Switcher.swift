@@ -11,6 +11,7 @@ struct AccountInfo {
     let isActive: Bool
     let creds: String
     let alias: String
+    var plan: String? = nil
 }
 
 enum UsageSentinel {

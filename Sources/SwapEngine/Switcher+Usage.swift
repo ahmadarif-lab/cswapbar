@@ -43,7 +43,10 @@ extension Switcher {
                 orgUuid: Self.str(account, "organizationUuid"),
                 isActive: isActive,
                 creds: creds,
-                alias: Self.str(account, "alias")
+                alias: Self.str(account, "alias"),
+                plan: isActive
+                    ? PlanLabel.from(store.readGlobalConfig()?["oauthAccount"]?.objectValue)
+                    : PlanLabel.from(configText: readAccountConfig(key, email))
             ))
         }
         return out
@@ -725,7 +728,8 @@ extension Switcher {
             lastGoodFetchedAt: lastGoodAtText,
             lastGoodAgeSeconds: lastGoodAgeS,
             disabled: disabled ? true : nil,
-            alias: info.alias.isEmpty ? nil : info.alias
+            alias: info.alias.isEmpty ? nil : info.alias,
+            plan: info.plan
         )
     }
 

@@ -71,23 +71,28 @@ final class ClaudeProvider: ObservableObject, AccountMutating, WarmingUp {
         if let usage = account.usage, account.usageStatus == "ok" {
             return ProviderAccount(
                 id: String(account.number), displayName: account.displayName,
-                subtitle: account.active ? "Active · Slot \(account.number)" : "Slot \(account.number)",
+                subtitle: subtitle(account),
                 pools: pools(from: usage), claudeDetail: detail
             )
         }
         if let usage = account.lastGoodUsage {
             return ProviderAccount(
                 id: String(account.number), displayName: account.displayName,
-                subtitle: account.active ? "Active · Slot \(account.number)" : "Slot \(account.number)",
+                subtitle: subtitle(account),
                 pools: pools(from: usage), statusText: account.usageStatus,
                 isStale: true, staleAgeSeconds: account.lastGoodAgeSeconds, claudeDetail: detail
             )
         }
         return ProviderAccount(
             id: String(account.number), displayName: account.displayName,
-            subtitle: account.active ? "Active · Slot \(account.number)" : "Slot \(account.number)",
+            subtitle: subtitle(account),
             statusText: account.usageStatus ?? "no usage data", claudeDetail: detail
         )
+    }
+
+    private static func subtitle(_ account: Account) -> String {
+        [account.active ? "Active" : nil, "Slot \(account.number)", account.plan]
+            .compactMap { $0 }.joined(separator: " · ")
     }
 
     private static func pools(from usage: Usage) -> [UsagePool] {

@@ -55,13 +55,15 @@ public struct Account: Codable, Equatable, Identifiable, Sendable {
     public let lastGoodAgeSeconds: Double?
     public let disabled: Bool?
     public let alias: String?
+    /// Subscription plan label ("Pro", "Max 5x", "Max 20x", …), nil when unknown.
+    public let plan: String?
 
     public init(
         number: Int, email: String, organizationName: String?, organizationUuid: String?,
         isOrganization: Bool?, active: Bool, usageStatus: String?, usage: Usage?,
         usageFetchedAt: String?, usageAgeSeconds: Double?,
         lastGoodUsage: Usage? = nil, lastGoodFetchedAt: String? = nil, lastGoodAgeSeconds: Double? = nil,
-        disabled: Bool?, alias: String?
+        disabled: Bool?, alias: String?, plan: String? = nil
     ) {
         self.number = number
         self.email = email
@@ -78,6 +80,7 @@ public struct Account: Codable, Equatable, Identifiable, Sendable {
         self.lastGoodAgeSeconds = lastGoodAgeSeconds
         self.disabled = disabled
         self.alias = alias
+        self.plan = plan
     }
 
     public var id: Int { number }

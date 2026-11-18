@@ -39,6 +39,18 @@ final class ParityTests: XCTestCase {
         XCTAssertFalse(CredentialShape.looksLikeAPIKey(nil))
     }
 
+    func testPlanLabel() {
+        func plan(_ type: String, _ tier: String) -> String? {
+            PlanLabel.from(configText: "{\"oauthAccount\":{\"organizationType\":\"\(type)\",\"organizationRateLimitTier\":\"\(tier)\"}}")
+        }
+        XCTAssertEqual(plan("claude_pro", "default_claude_ai"), "Pro")
+        XCTAssertEqual(plan("claude_max", "default_claude_max_5x"), "Max 5x")
+        XCTAssertEqual(plan("claude_max", "default_claude_max_20x"), "Max 20x")
+        XCTAssertEqual(plan("claude_team", ""), "Team")
+        XCTAssertNil(plan("", ""))
+        XCTAssertNil(PlanLabel.from(configText: "{\"oauthAccount\":{\"emailAddress\":\"api-key-4@token.local\"}}"))
+    }
+
     func testLoginlessObjectIsNotALogin() {
         XCTAssertTrue(CredentialShape.isLoginless("{\"mcpOAuth\":{\"srv|1\":{\"accessToken\":\"t\"}}}"))
         XCTAssertFalse(CredentialShape.isLoginless("{\"claudeAiOauth\":{\"accessToken\":\"t\"}}"))
