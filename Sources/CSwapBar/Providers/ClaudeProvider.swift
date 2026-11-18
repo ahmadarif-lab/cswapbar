@@ -90,9 +90,9 @@ final class ClaudeProvider: ObservableObject, AccountMutating, WarmingUp {
         )
     }
 
-    private static func subtitle(_ account: Account) -> String {
-        [account.active ? "Active" : nil, "Slot \(account.number)", account.plan]
-            .compactMap { $0 }.joined(separator: " · ")
+    private static func subtitle(_ account: Account) -> String? {
+        let parts = [account.active ? "Active" : nil, account.plan].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     private static func pools(from usage: Usage) -> [UsagePool] {
