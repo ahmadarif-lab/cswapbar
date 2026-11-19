@@ -48,6 +48,11 @@ public final class AccountEngine: @unchecked Sendable {
         }) ?? []
     }
 
+    /// How to warm `number` up without switching to it (see `WarmupLaunch`).
+    public func warmupLaunch(_ number: Int) async throws -> WarmupLaunch {
+        try await run { try $0.warmupLaunch(number) }
+    }
+
     public func disable(_ number: Int) async throws {
         try await run { try $0.setAccountDisabled(String(number), true) }
     }

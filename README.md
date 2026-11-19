@@ -79,8 +79,9 @@ appears after a blocked launch.
   countdown and local reset time next to each bar
 - Mini usage bars in the menu bar itself, so you don't have to open the popover
 - Click any account card to switch to it
-- **Warm up all accounts** — rotates through every account, sends a throwaway `claude -p` to each,
-  then returns to the account you started on; can also run on a schedule (see [Providers](#providers))
+- **Warm up all accounts** — sends a throwaway `claude -p` as every account, without switching: the
+  signed-in account is warmed as it is and every other one with its own access token, so a running
+  Claude Code session keeps its account; can also run on a schedule (see [Providers](#providers))
 - Add an account from the current login; pause/resume and remove accounts
 - Keeps itself up to date: checks for new releases, and a Homebrew install updates in place
 
@@ -93,7 +94,7 @@ Each action does exactly what the matching `cswap` command does, on the same fil
 | Add current login / Refresh credentials | `cswap add` |
 | Pause / resume | `cswap disable` / `cswap enable` |
 | Remove | `cswap remove <n>` |
-| Warm up all accounts | a switch + `claude -p` per account |
+| Warm up all accounts | `claude -p` per account (no switch; the others get their token via `CLAUDE_CODE_OAUTH_TOKEN`) |
 | Check for updates | GitHub's latest-release API, every 6 hours and on click |
 | Install update | `brew update` + `brew upgrade --cask ahmadarif-lab/tap/cswapbar`, then a relaunch |
 

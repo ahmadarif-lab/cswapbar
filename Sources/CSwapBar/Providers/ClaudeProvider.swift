@@ -190,10 +190,13 @@ final class ClaudeProvider: ObservableObject, AccountMutating, WarmingUp {
     }
 
     // MARK: - Warm-up all accounts
-    // Port of the `claude-warmup` zsh function: rotate through every managed
-    // account, send a throwaway `claude -p "halo"`, then switch back. Unlike
-    // the original it also warms a lone account (no switching needed), since
-    // a scheduled warm-up is just as useful with one.
+    // Sends a throwaway `claude -p "halo"` as every managed account so each
+    // one's 5-hour window is already running. The signed-in account is never
+    // switched: the active account is warmed as it is, and every other one
+    // through its own access token (see `AccountEngine.warmupLaunch`), so a
+    // running Claude Code session keeps its account and prompt cache. It also
+    // warms a lone account, since a scheduled warm-up is just as useful with
+    // one.
 
     func warmup() async { await warmupAll() }
 
@@ -205,8 +208,6 @@ final class ClaudeProvider: ObservableObject, AccountMutating, WarmingUp {
             warmupStatusText = "No managed accounts -- nothing to warm up."
             return
         }
-        let originalNumber = activeRawAccount?.number ?? ordered.first?.number
-        var currentNumber = activeRawAccount?.number
 
         isWarmingUp = true
         warmupStatusText = nil
@@ -215,34 +216,56 @@ final class ClaudeProvider: ObservableObject, AccountMutating, WarmingUp {
             warmupProgress = nil
         }
 
+        var warmed = 0
+        var problems: [String] = []
         for (index, account) in ordered.enumerated() {
             if Task.isCancelled { break }
             warmupProgress = (index + 1, ordered.count)
-            if account.number != currentNumber {
-                warmupStatusText = "Switching to \(account.displayName)…"
-                do {
-                    try await engine.switchTo(account.number)
-                    currentNumber = account.number
-                } catch {
-                    errorMessage = error.localizedDescription
-                    DiagnosticLog.log("claude", "warm-up: switching to \(account.displayName) failed: \(DiagnosticLog.describe(error))")
-                    continue
-                }
-            }
             warmupStatusText = "Sending warm-up message to \(account.displayName)…"
-            _ = try? await shell.claude(["-p", "halo"])
+            if let problem = await warmup(account) {
+                problems.append("\(account.displayName): \(problem)")
+                DiagnosticLog.log("claude", "warm-up of \(account.displayName) failed: \(problem)")
+            } else {
+                warmed += 1
+            }
         }
 
-        if let originalNumber, originalNumber != currentNumber {
-            warmupStatusText = "Switching back to original account…"
-            try? await engine.switchTo(originalNumber)
-        }
-
-        warmupStatusText = "Warm-up complete."
         await refresh()
-        try? await Task.sleep(nanoseconds: 4_000_000_000)
-        if warmupStatusText == "Warm-up complete." {
-            warmupStatusText = nil
+        if problems.isEmpty {
+            warmupStatusText = "Warm-up complete."
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            if warmupStatusText == "Warm-up complete." { warmupStatusText = nil }
+        } else {
+            // Left up until the next warm-up, so a failure is not missed.
+            warmupStatusText = "Warmed \(warmed) of \(ordered.count). " + problems.joined(separator: "; ")
         }
+    }
+
+    /// Warms one account up; the reason it could not be, otherwise nil.
+    private func warmup(_ account: Account) async -> String? {
+        let launch: WarmupLaunch
+        do {
+            launch = try await engine.warmupLaunch(account.number)
+        } catch {
+            return error.localizedDescription
+        }
+        let result: ProcessResult
+        do {
+            switch launch {
+            case .defaultLogin:
+                result = try await shell.claude(["-p", "halo"])
+            case .token(let token):
+                result = try await shell.claudeWithToken(["-p", "halo"], token: token)
+            case .skip(let reason):
+                return reason
+            }
+        } catch {
+            return error.localizedDescription
+        }
+        guard result.exitCode == 0 else {
+            let detail = result.combinedOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+            return detail.isEmpty ? "claude exited with status \(result.exitCode)" : String(detail.prefix(120))
+        }
+        return nil
     }
 }

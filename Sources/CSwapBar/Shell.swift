@@ -67,13 +67,18 @@ actor Shell {
     }
 
     @discardableResult
-    private func run(_ binary: String, _ args: [String]) async throws -> ProcessResult {
+    private func run(
+        _ binary: String, _ args: [String],
+        environment extra: [String: String] = [:], removingEnvironment removed: [String] = []
+    ) async throws -> ProcessResult {
         guard let path = resolve(binary) else { throw ShellError.binaryNotFound(binary) }
         return try await withCheckedThrowingContinuation { continuation in
             let process = Process()
             process.executableURL = URL(fileURLWithPath: path)
             process.arguments = args
             var env = ProcessInfo.processInfo.environment
+            for name in removed { env.removeValue(forKey: name) }
+            env.merge(extra) { _, new in new }
             env["PATH"] = Self.searchPath
             process.environment = env
 
@@ -112,6 +117,30 @@ actor Shell {
     @discardableResult
     func claude(_ args: [String]) async throws -> ProcessResult {
         try await run("claude", args)
+    }
+
+    /// Environment that would make `claude` authenticate as something other
+    /// than the token handed to `claudeWithToken`.
+    private static let authOverrides = [
+        "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR",
+        "CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR", "CLAUDE_SECURESTORAGE_CONFIG_DIR",
+    ]
+
+    /// Runs `claude` as the account that owns `token` (an OAuth access token),
+    /// leaving the signed-in login alone: the token goes in
+    /// `CLAUDE_CODE_OAUTH_TOKEN` and the config dir is a throwaway one, so
+    /// nothing is read from or written to `~/.claude` or the Keychain.
+    @discardableResult
+    func claudeWithToken(_ args: [String], token: String) async throws -> ProcessResult {
+        let configDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cswapbar-warmup-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        defer { try? FileManager.default.removeItem(at: configDir) }
+        return try await run(
+            "claude", args,
+            environment: ["CLAUDE_CODE_OAUTH_TOKEN": token, "CLAUDE_CONFIG_DIR": configDir.path],
+            removingEnvironment: Self.authOverrides
+        )
     }
 
     /// Used only by the updater: the app ships as a Homebrew cask, so
