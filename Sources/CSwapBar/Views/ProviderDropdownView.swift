@@ -89,8 +89,8 @@ struct ProviderDropdownView<P: Provider, Extra: View>: View {
         return "Updated \(formatter.localizedString(for: date, relativeTo: Date()))"
     }
 
-    /// Installing an update lives only in Settings > General (see
-    /// `AboutHeader`); the dropdown just points there once one is found.
+    /// An available update is installed straight from here (see
+    /// `UpdateAvailableRow`); Settings > General has the same button.
     private var footer: some View {
         VStack(spacing: 0) {
             UpdateAvailableRow()
@@ -108,22 +108,26 @@ struct ProviderDropdownView<P: Provider, Extra: View>: View {
     }
 }
 
-/// "Update available" row, shown only once the background check has found a
-/// newer release; clicking it opens Settings on General, where the actual
-/// install button lives.
+/// "Install update" row, shown only once the background check has found a
+/// newer release. One click installs it and relaunches the app: the work
+/// runs on the store's `Updater`, so it carries on if the dropdown closes,
+/// and reopening the dropdown shows where it is. A failure stays on the row
+/// as its subtitle, and clicking again retries.
 private struct UpdateAvailableRow: View {
     @EnvironmentObject var updater: Updater
 
     var body: some View {
         if let release = updater.availableUpdate {
             ActionRow(
-                icon: "arrow.down.circle.fill",
-                title: "Update available",
+                icon: updater.isUpdating ? "arrow.triangle.2.circlepath" : "arrow.down.circle.fill",
+                title: updater.progressText ?? (Updater.installedViaHomebrew ? "Install update" : "Download update"),
+                subtitle: updater.errorMessage,
                 detail: "v\(release.version)",
                 detailTint: Theme.accent,
-                tint: Theme.accent
+                tint: Theme.accent,
+                disabled: updater.isUpdating
             ) {
-                SettingsWindow.show(page: .general)
+                Task { await updater.update() }
             }
         }
     }

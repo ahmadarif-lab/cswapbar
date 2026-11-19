@@ -150,7 +150,7 @@ final class Updater: ObservableObject {
     }
 
     /// The cask's Caskroom entry, under either Homebrew prefix.
-    private static var installedViaHomebrew: Bool {
+    static var installedViaHomebrew: Bool {
         ["/opt/homebrew/Caskroom/cswapbar", "/usr/local/Caskroom/cswapbar"]
             .contains { FileManager.default.fileExists(atPath: $0) }
     }
